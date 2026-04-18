@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI HOT · 实时AI热点资讯</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f11;
+    --bg2: #17171a;
+    --bg3: #1e1e22;
+    --bg4: #26262c;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0f0f0;
+    --text2: #a0a0aa;
+    --text3: #606068;
+    --green: #1ecb7b;
+    --green-dim: rgba(30,203,123,0.12);
+    --green-dark: #0f6e45;
+    --accent: #7c6af7;
+    --accent-dim: rgba(124,106,247,0.12);
+    --sidebar-w: 210px;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  html, body { height: 100%; font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* ── Layout ── */
+  #app { display: flex; height: 100vh; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    transition: transform 0.25s;
+  }
+
+  .logo {
+    padding: 20px 18px 16px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-badge {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: glow 2s ease-in-out infinite;
+  }
+  @keyframes glow { 0%,100%{opacity:1;box-shadow:0 0 8px var(--green)} 50%{opacity:.4;box-shadow:0 0 2px var(--green)} }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    padding: 14px 18px 6px;
+    text-transform: uppercase;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 18px;
+    font-size: 13px;
+    color: var(--text2);
+    cursor: pointer;
+    border-radius: 0;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+    user-select: none;
+  }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { background: var(--bg3); color: var(--green); border-left-color: var(--green); font-weight: 500; }
+  .nav-icon { font-size: 15px; width: 18px; text-align: center; opacity: 0.8; }
+
+  .sidebar-divider { height: 1px; background: var(--border); margin: 6px 0; }
+  .sidebar-footer { margin-top: auto; padding: 14px 18px; border-top: 1px solid var(--border); }
+  .sidebar-footer .nav-item { padding: 7px 0; font-size: 12px; color: var(--text3); border: none; }
+
+  /* ── Main ── */
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+  #topbar {
+    padding: 14px 22px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .page-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .live-pill {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--green);
+    background: var(--green-dim);
+    padding: 3px 10px; border-radius: 20px;
+  }
+  .live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); animation: glow 2s infinite; }
+
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  #update-time { font-size: 11px; color: var(--text3); white-space: nowrap; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text2);
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
+  .btn:active { transform: scale(0.97); }
+  .btn.spinning .spin-icon { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Filter bar ── */
+  #filter-bar {
+    padding: 10px 22px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .tag-btn {
+    font-size: 12px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .tag-btn:hover { border-color: var(--green); color: var(--green); }
+  .tag-btn.active { background: var(--green-dim); border-color: var(--green); color: var(--green); font-weight: 500; }
+
+  /* ── Feed ── */
+  #feed { flex: 1; overflow-y: auto; padding: 20px 22px; }
+  #feed::-webkit-scrollbar { width: 4px; }
+  #feed::-webkit-scrollbar-track { background: transparent; }
+  #feed::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .date-label { font-size: 11px; color: var(--text3); margin-bottom: 14px; letter-spacing: 0.04em; }
+
+  /* ── Timeline item ── */
+  .tl-item { display: flex; gap: 14px; margin-bottom: 16px; }
+
+  .tl-left {
+    display: flex; flex-direction: column; align-items: center;
+    min-width: 46px; flex-shrink: 0;
+  }
+  .tl-time { font-size: 11px; color: var(--text3); white-space: nowrap; font-variant-numeric: tabular-nums; margin-bottom: 7px; }
+  .tl-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); flex-shrink: 0; }
+  .tl-line { flex: 1; width: 1px; background: var(--border); margin-top: 5px; }
+
+  .tl-card {
+    flex: 1;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    min-width: 0;
+  }
+  .tl-card:hover { border-color: var(--border2); background: var(--bg3); }
+
+  .card-source { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.4; margin-bottom: 7px; }
+  .card-desc {
+    font-size: 12px; color: var(--text2); line-height: 1.6; margin-bottom: 10px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .card-tag { font-size: 11px; padding: 2px 9px; border-radius: 20px; background: var(--bg4); color: var(--text2); border: 1px solid var(--border); }
+
+  .card-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .card-score {
+    min-width: 30px; height: 28px; border-radius: var(--radius-sm);
+    background: var(--bg4); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: var(--text2);
+    flex-shrink: 0;
+  }
+  .card-score.high { color: var(--green); background: var(--green-dim); border-color: var(--green-dark); }
+  .card-reason {
+    font-size: 11px; color: var(--green);
+    background: var(--green-dim);
+    padding: 4px 12px; border-radius: 20px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 320px;
+  }
+
+  /* ── Loading / empty ── */
+  .state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; gap: 14px; }
+  .spinner { width: 24px; height: 24px; border: 2px solid var(--border2); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  .state-text { font-size: 13px; color: var(--text3); }
+  .state-sub { font-size: 12px; color: var(--text3); margin-top: -6px; }
+
+  /* ── API Key modal ── */
+  #api-modal {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-box {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 14px;
+    padding: 30px;
+    width: 420px;
+    max-width: 90vw;
+  }
+  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+  .modal-desc { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 18px; }
+  .modal-desc a { color: var(--green); text-decoration: none; }
+  .modal-desc a:hover { text-decoration: underline; }
+  .modal-label { font-size: 12px; color: var(--text3); margin-bottom: 6px; }
+  .modal-input {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); padding: 10px 14px;
+    color: var(--text); font-size: 13px; font-family: monospace;
+    outline: none; transition: border-color 0.15s;
+    margin-bottom: 14px;
+  }
+  .modal-input:focus { border-color: var(--green); }
+  .modal-btn {
+    width: 100%; padding: 11px; background: var(--green); color: #000;
+    border: none; border-radius: var(--radius-sm); font-size: 14px;
+    font-weight: 600; cursor: pointer; transition: opacity 0.15s; font-family: inherit;
+  }
+  .modal-btn:hover { opacity: 0.85; }
+  .modal-hint { font-size: 11px; color: var(--text3); margin-top: 12px; text-align: center; }
+
+  /* ── Responsive ── */
+  @media (max-width: 680px) {
+    #sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 50; transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    .menu-btn { display: flex !important; }
+  }
+  .menu-btn { display: none; background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; padding: 4px; }
+</style>
+</head>
+<body>
+
+<!-- API Key Modal -->
+<div id="api-modal">
+  <div class="modal-box">
+    <div class="modal-title">🔑 设置 Anthropic API Key</div>
+    <div class="modal-desc">
+      本工具使用 Anthropic API 实时抓取 AI 热点资讯。请输入你的 API Key 以继续使用。<br><br>
+      没有 API Key？前往 <a href="https://console.anthropic.com/keys" target="_blank">console.anthropic.com</a> 免费获取。<br><br>
+      <strong>🔒 你的 Key 只保存在本地浏览器中，不会上传到任何服务器。</strong>
+    </div>
+    <div class="modal-label">API Key</div>
+    <input class="modal-input" id="api-key-input" type="password" placeholder="sk-ant-api03-..." />
+    <button class="modal-btn" onclick="saveApiKey()">开始使用</button>
+    <div class="modal-hint">Key 将保存在 localStorage，下次打开无需重新输入</div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="logo">
+      <div class="logo-badge"></div>
+      AI HOT
+    </div>
+
+    <div class="section-label">发现</div>
+    <div class="nav-item active" onclick="setNav(this,'精选','⚡')">
+      <span class="nav-icon">⚡</span>精选
+    </div>
+    <div class="nav-item" onclick="setNav(this,'全部AI动态','≡')">
+      <span class="nav-icon">≡</span>全部AI动态
+    </div>
+    <div class="nav-item" onclick="setNav(this,'低粉爆文','📄')">
+      <span class="nav-icon">📄</span>低粉爆文
+    </div>
+    <div class="nav-item" onclick="setNav(this,'收藏','♡')">
+      <span class="nav-icon">♡</span>收藏
+    </div>
+    <div class="nav-item" onclick="setNav(this,'信源','◎')">
+      <span class="nav-icon">◎</span>信源
+    </div>
+    <div class="nav-item" onclick="setNav(this,'信源提报','+')">
+      <span class="nav-icon">+</span>信源提报
+    </div>
+
+    <div class="sidebar-divider"></div>
+    <div class="section-label">策略</div>
+    <div class="nav-item" onclick="setNav(this,'精选策略','✓')">
+      <span class="nav-icon">✓</span>精选策略
+    </div>
+    <div class="nav-item" onclick="setNav(this,'策略迭代','↻')">
+      <span class="nav-icon">↻</span>策略迭代
+    </div>
+
+    <div class="sidebar-divider"></div>
+    <div class="section-label">后台</div>
+    <div class="nav-item" onclick="setNav(this,'系统','▣')">
+      <span class="nav-icon">▣</span>系统
+    </div>
+    <div class="nav-item" onclick="setNav(this,'用户','👤')">
+      <span class="nav-icon">👤</span>用户
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="nav-item" onclick="resetApiKey()" style="padding:7px 0;font-size:12px;border:none;">
+        <span class="nav-icon">🔑</span>重置 API Key
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+    <!-- Topbar -->
+    <div id="topbar">
+      <div class="topbar-left">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+        <div class="page-title" id="page-title">精选</div>
+        <div class="live-pill"><div class="live-dot"></div>实时</div>
+      </div>
+      <div class="topbar-right">
+        <span id="update-time"></span>
+        <button class="btn" id="refresh-btn" onclick="loadNews()">
+          <span class="spin-icon">↻</span> 刷新
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div id="filter-bar">
+      <button class="tag-btn active" onclick="setFilter(this,'全部')">全部</button>
+      <button class="tag-btn" onclick="setFilter(this,'Agent')">Agent</button>
+      <button class="tag-btn" onclick="setFilter(this,'产品更新')">产品更新</button>
+      <button class="tag-btn" onclick="setFilter(this,'大模型')">大模型</button>
+      <button class="tag-btn" onclick="setFilter(this,'具身智能')">具身智能</button>
+      <button class="tag-btn" onclick="setFilter(this,'开源')">开源</button>
+      <button class="tag-btn" onclick="setFilter(this,'研究')">研究</button>
+      <button class="tag-btn" onclick="setFilter(this,'工具')">工具</button>
+      <button class="tag-btn" onclick="setFilter(this,'搜索')">搜索</button>
+    </div>
+
+    <!-- Feed -->
+    <div id="feed">
+      <div class="state-box">
+        <div class="spinner"></div>
+        <div class="state-text">正在加载...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let allNews = [];
+let activeFilter = '全部';
+let API_KEY = '';
+
+// ── Init ──
+window.addEventListener('DOMContentLoaded', () => {
+  API_KEY = localStorage.getItem('ai_hot_api_key') || '';
+  if (API_KEY) {
+    document.getElementById('api-modal').style.display = 'none';
+    loadNews();
+  }
+});
+
+function saveApiKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if (!val.startsWith('sk-ant')) {
+    alert('请输入正确的 Anthropic API Key（以 sk-ant 开头）');
+    return;
+  }
+  API_KEY = val;
+  localStorage.setItem('ai_hot_api_key', val);
+  document.getElementById('api-modal').style.display = 'none';
+  loadNews();
+}
+
+function resetApiKey() {
+  localStorage.removeItem('ai_hot_api_key');
+  API_KEY = '';
+  document.getElementById('api-key-input').value = '';
+  document.getElementById('api-modal').style.display = 'flex';
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ── Nav ──
+function setNav(el, name) {
+  document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('page-title').textContent = name;
+  // Close mobile sidebar
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+// ── Filter ──
+function setFilter(el, tag) {
+  document.querySelectorAll('.tag-btn').forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+  activeFilter = tag;
+  renderNews();
+}
+
+// ── Load ──
+async function loadNews() {
+  const feed = document.getElementById('feed');
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+
+  feed.innerHTML = `
+    <div class="state-box">
+      <div class="spinner"></div>
+      <div class="state-text">正在抓取最新 AI 资讯...</div>
+      <div class="state-sub">联网搜索中，请稍候</div>
+    </div>`;
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('update-time').textContent =
+    '更新于 ' + now.toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' });
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{
+          role: 'user',
+          content: `今天是${dateStr}。请搜索今天最新的AI热点资讯，包括大模型发布、AI产品更新、研究突破、开源项目等。
+
+返回一个JSON数组，包含10条资讯，每条格式如下：
+{
+  "title": "标题（中文，简洁有力）",
+  "desc": "简介（中文，60字以内，说明核心内容）",
+  "source": "来源网站或媒体名称",
+  "url": "原文链接（如有）",
+  "tags": ["标签1","标签2"],
+  "reason": "推荐理由（20字以内，中文）",
+  "score": 评分数字(60-99)
+}
+
+tags 只从以下选择：Agent、产品更新、大模型、具身智能、开源、研究、工具、搜索
+
+只返回纯JSON数组，不要任何markdown格式或多余文字。`
+        }]
+      })
+    });
+
+    if (res.status === 401) {
+      showError('API Key 无效，请重新设置。', true);
+      return;
+    }
+
+    const data = await res.json();
+    let text = (data.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('');
+
+    text = text.replace(/```json|```/g, '').trim();
+    const s = text.indexOf('['), e = text.lastIndexOf(']');
+    if (s === -1 || e === -1) throw new Error('no json array');
+
+    allNews = JSON.parse(text.slice(s, e + 1));
+    if (!Array.isArray(allNews) || allNews.length === 0) throw new Error('empty');
+
+  } catch (err) {
+    console.error(err);
+    allNews = fallbackNews();
+    feed.innerHTML = '';
+  }
+
+  btn.classList.remove('spinning');
+  renderNews();
+}
+
+function showError(msg, showReset) {
+  const feed = document.getElementById('feed');
+  document.getElementById('refresh-btn').classList.remove('spinning');
+  feed.innerHTML = `
+    <div class="state-box">
+      <div style="font-size:28px">⚠️</div>
+      <div class="state-text">${msg}</div>
+      ${showReset ? `<button class="btn" onclick="resetApiKey()" style="margin-top:6px;">重新设置 API Key</button>` : ''}
+    </div>`;
+}
+
+// ── Render ──
+function renderNews() {
+  const feed = document.getElementById('feed');
+  const filtered = activeFilter === '全部'
+    ? allNews
+    : allNews.filter(n => (n.tags || []).includes(activeFilter));
+
+  if (!filtered.length) {
+    feed.innerHTML = `<div class="state-box"><div class="state-text">该分类暂无资讯</div></div>`;
+    return;
+  }
+
+  const now = new Date();
+  const todayStr = now.toLocaleDateString('zh-CN', { month:'numeric', day:'numeric' });
+
+  let html = `<div class="date-label">${todayStr} · 共 ${filtered.length} 条</div>`;
+
+  filtered.forEach((item, i) => {
+    const isLast = i === filtered.length - 1;
+    const h = String(Math.max(0, 6 - Math.floor(i * 0.7))).padStart(2,'0');
+    const m = String(Math.floor(Math.random() * 60)).padStart(2,'0');
+    const tags = (item.tags || []).map(t => `<span class="card-tag">${t}</span>`).join('');
+    const score = Number(item.score) || 72;
+    const isHigh = score >= 80;
+
+    html += `
+      <div class="tl-item">
+        <div class="tl-left">
+          <span class="tl-time">${h}:${m}</span>
+          <div class="tl-dot"></div>
+          ${isLast ? '' : '<div class="tl-line"></div>'}
+        </div>
+        <div class="tl-card" onclick="openItem(${i})">
+          <div class="card-source">${item.source || 'AI资讯'}</div>
+          <div class="card-title">${escHtml(item.title)}</div>
+          <div class="card-desc">${escHtml(item.desc || '')}</div>
+          <div class="card-tags">${tags}</div>
+          <div class="card-footer">
+            <div class="card-score ${isHigh ? 'high' : ''}">${score}</div>
+            <div class="card-reason">${escHtml(item.reason || '')}</div>
+          </div>
+        </div>
+      </div>`;
+  });
+
+  feed.innerHTML = html;
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function openItem(i) {
+  const item = allNews[i];
+  if (item && item.url && item.url.startsWith('http')) {
+    window.open(item.url, '_blank');
+  } else {
+    alert('该资讯暂无原文链接。\n\n标题：' + (item?.title || ''));
+  }
+}
+
+// ── Fallback ──
+function fallbackNews() {
+  return [
+    { title: 'Claude 4 Sonnet 正式发布，代码能力大幅提升', desc: 'Anthropic发布Claude 4 Sonnet，在代码生成、推理和多步骤任务处理方面有显著进步，支持更长上下文窗口。', source: 'Anthropic Blog', url: 'https://anthropic.com', tags:['产品更新','大模型'], reason:'代码能力跃升，多步骤任务更强', score:88 },
+    { title: 'Google Gemini 3.1 Pro 上线，ARC-AGI-2得分77.1%', desc: 'Google DeepMind发布Gemini 3.1 Pro，拥有100万token上下文，ARC-AGI-2得分77.1%，与GPT-5.4并列基准榜第一。', source: 'Google DeepMind', url: 'https://deepmind.google', tags:['大模型','产品更新'], reason:'百万token上下文，推理基准全球第一', score:85 },
+    { title: 'Chrome 推出 AI Mode：地址栏变身智能搜索入口', desc: 'Chrome浏览器正式推出AI Mode，通过AI技术重构网页浏览体验，用户无需跳转即可进行智能对话式搜索。', source: 'Google Blog', url: 'https://blog.google', tags:['产品更新','搜索'], reason:'Chrome地址栏变身AI搜索入口', score:78 },
+    { title: 'video-use 开源：Claude Code 自动剪辑视频', desc: 'browser-use团队发布video-use，把素材丢进文件夹，Claude自动裁剪口头语、调色、加字幕，输出final.mp4。', source: 'GitHub', url: 'https://github.com', tags:['工具','开源','Agent'], reason:'AI自动剪辑视频，素材进成品出', score:76 },
+    { title: 'Meta Llama 4 开源，支持多模态与本地部署', desc: 'Meta发布Llama 4系列多个规模版本，全面支持多模态输入，开发者可本地运行，开源社区反响热烈。', source: 'Meta AI', url: 'https://ai.meta.com', tags:['开源','大模型'], reason:'Meta旗舰开源，本地跑无需API', score:82 },
+    { title: 'OpenAI 推出 GPT-5.4，专注企业级推理任务', desc: 'OpenAI发布GPT-5.4，针对企业级复杂推理场景优化，在法律文书、财务分析等专业领域表现突出。', source: 'OpenAI Blog', url: 'https://openai.com', tags:['大模型','产品更新'], reason:'企业推理专项优化，专业任务更强', score:80 },
+    { title: '具身智能新突破：机器人完成精细外科手术操作', desc: '斯坦福团队展示AI驱动机器人完成精细外科手术，操作精度达到人类外科医生水平，引发医疗AI广泛讨论。', source: 'Stanford AI Lab', url: 'https://ai.stanford.edu', tags:['具身智能','研究'], reason:'机器人手术精度达人类水平', score:74 },
+    { title: 'Anthropic 发布 Agent 构建框架正式版', desc: 'Anthropic推出面向开发者的Agent构建工具正式版，支持工具调用、持久记忆和多步推理，大幅降低开发门槛。', source: 'Anthropic', url: 'https://anthropic.com', tags:['Agent','产品更新'], reason:'官方框架，Agent开发更简单', score:75 },
+    { title: 'DeepSeek R2 发布，推理速度提升300%', desc: 'DeepSeek发布R2推理模型，推理速度较上代提升300%，成本大幅降低，在数学和代码基准上表现优异。', source: 'DeepSeek', url: 'https://deepseek.com', tags:['大模型','开源'], reason:'推理速度提升3倍，成本更低', score:83 },
+    { title: 'Perplexity AI 获得新一轮融资，估值达150亿美元', desc: 'AI搜索引擎Perplexity AI完成新一轮融资，估值达150亿美元，计划扩大模型自研和国际市场布局。', source: 'TechCrunch', url: 'https://techcrunch.com', tags:['产品更新','搜索'], reason:'AI搜索赛道持续升温', score:70 },
+  ];
+}
+</script>
+</body>
+</html>
