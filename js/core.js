@@ -126,6 +126,35 @@
     return html;
   }
 
+  function normalizeNewsItem(item) {
+    if (!item || typeof item !== 'object') return null;
+    var title = String(item.title || '').trim();
+    if (!title) return null;
+    var tags = Array.isArray(item.tags)
+      ? item.tags.filter(function (t) { return ALLOWED_TAGS.indexOf(t) !== -1; })
+      : [];
+    return {
+      title: title,
+      desc: String(item.desc || ''),
+      source: defaultSource(item.source),
+      url: String(item.url || ''),
+      tags: tags,
+      reason: String(item.reason || ''),
+      score: normalizeScore(item.score)
+    };
+  }
+
+  function normalizeNewsList(list) {
+    if (!Array.isArray(list)) return [];
+    return list.map(normalizeNewsItem).filter(Boolean);
+  }
+
+  function parseNewsPayload(payload) {
+    if (Array.isArray(payload)) return normalizeNewsList(payload);
+    if (payload && Array.isArray(payload.items)) return normalizeNewsList(payload.items);
+    return [];
+  }
+
   function buildApiRequestBody(dateStr) {
     return {
       model: 'claude-sonnet-4-20250514',
@@ -175,6 +204,9 @@
     renderNewsItem: renderNewsItem,
     buildFeedHtml: buildFeedHtml,
     buildApiRequestBody: buildApiRequestBody,
+    normalizeNewsItem: normalizeNewsItem,
+    normalizeNewsList: normalizeNewsList,
+    parseNewsPayload: parseNewsPayload,
     fallbackNews: fallbackNews
   };
 });

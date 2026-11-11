@@ -403,10 +403,7 @@ let API_KEY = '';
 // ── Init ──
 window.addEventListener('DOMContentLoaded', () => {
   API_KEY = localStorage.getItem('ai_hot_api_key') || '';
-  if (API_KEY) {
-    document.getElementById('api-modal').style.display = 'none';
-    loadNews();
-  }
+  loadNews();
 });
 
 function saveApiKey() {
@@ -450,41 +447,64 @@ function setFilter(el, tag) {
 }
 
 // ── Load ──
+async function loadLocalNews() {
+  const res = await fetch('/api/news');
+  if (!res.ok) throw new Error('local api ' + res.status);
+  const data = await res.json();
+  const items = Array.isArray(data.items) ? data.items : [];
+  if (!items.length) throw new Error('local empty');
+  return items;
+}
+
+async function loadRemoteNews() {
+  const now = new Date();
+  const dateStr = formatPromptDate(now);
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify(buildApiRequestBody(dateStr))
+  });
+  if (res.status === 401) {
+    const err = new Error('unauthorized');
+    err.code = 401;
+    throw err;
+  }
+  const data = await res.json();
+  return parseNewsJson(extractTextFromApiResponse(data));
+}
+
 async function loadNews() {
   const feed = document.getElementById('feed');
   const btn = document.getElementById('refresh-btn');
   btn.classList.add('spinning');
-
   feed.innerHTML = loadingFeedHtml();
-
-  const now = new Date();
-  const dateStr = formatPromptDate(now);
-  document.getElementById('update-time').textContent = formatUpdateTime(now);
+  document.getElementById('update-time').textContent = formatUpdateTime(new Date());
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify(buildApiRequestBody(dateStr))
-    });
-
-    if (res.status === 401) {
-      showError('API Key 无效，请重新设置。', true);
-      return;
+    allNews = await loadLocalNews();
+    document.getElementById('api-modal').style.display = 'none';
+  } catch (localErr) {
+    if (!API_KEY) {
+      document.getElementById('api-modal').style.display = 'flex';
+      allNews = fallbackNews();
+    } else {
+      try {
+        allNews = await loadRemoteNews();
+        document.getElementById('api-modal').style.display = 'none';
+      } catch (err) {
+        if (err && err.code === 401) {
+          showError('API Key 无效，请重新设置。', true);
+          return;
+        }
+        console.error(err);
+        allNews = fallbackNews();
+      }
     }
-
-    const data = await res.json();
-    allNews = parseNewsJson(extractTextFromApiResponse(data));
-
-  } catch (err) {
-    console.error(err);
-    allNews = fallbackNews();
-    feed.innerHTML = '';
   }
 
   btn.classList.remove('spinning');

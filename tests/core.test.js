@@ -7,6 +7,9 @@ const {
   filterNews,
   extractTextFromApiResponse,
   parseNewsJson,
+  parseNewsPayload,
+  normalizeNewsItem,
+  normalizeNewsList,
   normalizeScore,
   isHighScore,
   resolveItemUrl,
@@ -310,6 +313,53 @@ describe('renderNewsItem / buildFeedHtml', () => {
     assert.match(html, /共 2 条/);
     assert.equal((html.match(/tl-item/g) || []).length, 2);
     assert.equal((html.match(/tl-line/g) || []).length, 1);
+  });
+});
+
+describe('normalizeNewsItem / parseNewsPayload', () => {
+  it('keeps valid fields and drops unknown tags', () => {
+    const item = normalizeNewsItem({
+      title: '  Hello  ',
+      desc: 'd',
+      source: 'S',
+      url: 'https://x.com',
+      tags: ['大模型', 'unknown', '开源'],
+      reason: 'r',
+      score: '91'
+    });
+    assert.deepEqual(item, {
+      title: 'Hello',
+      desc: 'd',
+      source: 'S',
+      url: 'https://x.com',
+      tags: ['大模型', '开源'],
+      reason: 'r',
+      score: 91
+    });
+  });
+
+  it('rejects items without title', () => {
+    assert.equal(normalizeNewsItem({ desc: 'x' }), null);
+    assert.equal(normalizeNewsItem(null), null);
+  });
+
+  it('parses both array and items-wrapper payloads', () => {
+    const items = [{ title: 'A', tags: ['Agent'] }];
+    assert.equal(parseNewsPayload(items).length, 1);
+    assert.equal(parseNewsPayload({ items: items }).length, 1);
+    assert.deepEqual(parseNewsPayload({}), []);
+    assert.deepEqual(normalizeNewsList('bad'), []);
+  });
+});
+
+describe('local news.json sample', () => {
+  it('loads and normalizes packaged news data', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const raw = JSON.parse(fs.readFileSync(path.join(__dirname, '../data/news.json'), 'utf8'));
+    const items = parseNewsPayload(raw);
+    assert.equal(items.length, 10);
+    assert.ok(items.every((n) => n.title && n.score >= 60));
   });
 });
 

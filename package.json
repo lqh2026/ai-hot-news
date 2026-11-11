@@ -3,6 +3,8 @@
   "private": true,
   "description": "AI Hot News unit tests",
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "test:go": "go test ./server",
+    "release": "bash scripts/build-releases.sh v1.0.0"
   }
 }

@@ -1,0 +1,5 @@
+dist/
+*.exe
+bin/
+*.tmp
+news.json.tmp

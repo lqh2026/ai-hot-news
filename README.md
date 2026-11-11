@@ -25,5 +25,41 @@ AI Hot News 是一个基于 **Hermes Agent + OpenClaw** 多智能体协作开发
 - 大幅降低 API 成本，提升系统稳定性
 - 实现更智能的个性化推荐与自动推送
 
+## Releases 安装包
+
+从 GitHub Releases 下载对应系统压缩包：
+
+- Windows x64：`AI-Hot-News-v1.0.0-windows-x64.zip`
+- macOS Intel：`AI-Hot-News-v1.0.0-macos-intel.zip`
+- macOS Apple Silicon：`AI-Hot-News-v1.0.0-macos-apple-silicon.zip`
+
+解压后：
+
+Windows 双击 `start.bat`  
+macOS 双击 `start.command`
+
+浏览器会打开 `http://127.0.0.1:8787/`。资讯内容来自安装包内的 `data/news.json`。
+
+## 发给任意 AI Agent
+
+把整个解压目录发给其他 AI Agent，并让它阅读 `agent/SKILL.md`。Agent 可以通过：
+
+```bash
+curl -X PUT http://127.0.0.1:8787/api/news -H "Content-Type: application/json" -d '{"items":[...]}'
+```
+
+自定义网页上的科技资讯。
+
+本地开发：
+
+```bash
+# 单元测试
+npm test
+go test ./server
+
+# 构建安装包
+bash scripts/build-releases.sh v1.0.0
+```
+
 ## 项目地址
 https://github.com/lqh2026/ai-hot-news
