@@ -1,0 +1,13 @@
+name = "ai-hot-news"
+compatibility_date = "2025-09-01"
+pages_build_output_dir = "."
+
+# KV 缓存（强烈建议绑定，否则退化为函数实例内存缓存，多实例间不共享）
+# 创建命令：npx wrangler kv namespace create NEWS_KV
+[[kv_namespaces]]
+binding = "NEWS_KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+[vars]
+# 模型降级链：前一个不可用会自动切下一个
+MODEL_CHAIN = "claude-sonnet-4-5-20250929,claude-sonnet-4-20250514,claude-3-7-sonnet-20250219"

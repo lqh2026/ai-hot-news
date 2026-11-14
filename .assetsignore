@@ -1,0 +1,8 @@
+# 静态资源发布时排除这些，避免函数源码与配置被当作静态文件公开
+functions
+node_modules
+.dev.vars
+*.toml
+*.mjs
+*.json
+README.md

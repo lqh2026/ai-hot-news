@@ -1,0 +1,12 @@
+{
+  "name": "ai-hot-news",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI 科技资讯聚合站 —— Pages Functions 代理 + KV 缓存",
+  "scripts": {
+    "dev": "node dev-server.mjs",
+    "test": "node test/api.test.mjs",
+    "deploy": "wrangler pages deploy ."
+  }
+}

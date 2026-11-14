@@ -216,47 +216,25 @@
     max-width: 320px;
   }
 
+  /* ── Error banner ── */
+  .err-banner {
+    background: rgba(232,180,90,0.08);
+    border: 1px solid rgba(232,180,90,0.26);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: #e8b45a;
+    line-height: 1.65;
+  }
+  .err-banner .err-title { font-weight: 600; margin-bottom: 4px; }
+  .err-banner .err-hint { color: var(--text3); font-size: 11px; }
+
   /* ── Loading / empty ── */
   .state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; gap: 14px; }
   .spinner { width: 24px; height: 24px; border: 2px solid var(--border2); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; }
   .state-text { font-size: 13px; color: var(--text3); }
   .state-sub { font-size: 12px; color: var(--text3); margin-top: -6px; }
-
-  /* ── API Key modal ── */
-  #api-modal {
-    position: fixed; inset: 0; z-index: 100;
-    background: rgba(0,0,0,0.7);
-    display: flex; align-items: center; justify-content: center;
-    backdrop-filter: blur(4px);
-  }
-  .modal-box {
-    background: var(--bg2);
-    border: 1px solid var(--border2);
-    border-radius: 14px;
-    padding: 30px;
-    width: 420px;
-    max-width: 90vw;
-  }
-  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
-  .modal-desc { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 18px; }
-  .modal-desc a { color: var(--green); text-decoration: none; }
-  .modal-desc a:hover { text-decoration: underline; }
-  .modal-label { font-size: 12px; color: var(--text3); margin-bottom: 6px; }
-  .modal-input {
-    width: 100%; background: var(--bg3); border: 1px solid var(--border2);
-    border-radius: var(--radius-sm); padding: 10px 14px;
-    color: var(--text); font-size: 13px; font-family: monospace;
-    outline: none; transition: border-color 0.15s;
-    margin-bottom: 14px;
-  }
-  .modal-input:focus { border-color: var(--green); }
-  .modal-btn {
-    width: 100%; padding: 11px; background: var(--green); color: #000;
-    border: none; border-radius: var(--radius-sm); font-size: 14px;
-    font-weight: 600; cursor: pointer; transition: opacity 0.15s; font-family: inherit;
-  }
-  .modal-btn:hover { opacity: 0.85; }
-  .modal-hint { font-size: 11px; color: var(--text3); margin-top: 12px; text-align: center; }
 
   /* ── Responsive ── */
   @media (max-width: 680px) {
@@ -268,22 +246,6 @@
 </style>
 </head>
 <body>
-
-<!-- API Key Modal -->
-<div id="api-modal">
-  <div class="modal-box">
-    <div class="modal-title">🔑 设置 Anthropic API Key</div>
-    <div class="modal-desc">
-      本工具使用 Anthropic API 实时抓取 AI 热点资讯。请输入你的 API Key 以继续使用。<br><br>
-      没有 API Key？前往 <a href="https://console.anthropic.com/keys" target="_blank">console.anthropic.com</a> 免费获取。<br><br>
-      <strong>🔒 你的 Key 只保存在本地浏览器中，不会上传到任何服务器。</strong>
-    </div>
-    <div class="modal-label">API Key</div>
-    <input class="modal-input" id="api-key-input" type="password" placeholder="sk-ant-api03-..." />
-    <button class="modal-btn" onclick="saveApiKey()">开始使用</button>
-    <div class="modal-hint">Key 将保存在 localStorage，下次打开无需重新输入</div>
-  </div>
-</div>
 
 <!-- App -->
 <div id="app">
@@ -333,8 +295,8 @@
     </div>
 
     <div class="sidebar-footer">
-      <div class="nav-item" onclick="resetApiKey()" style="padding:7px 0;font-size:12px;border:none;">
-        <span class="nav-icon">🔑</span>重置 API Key
+      <div class="nav-item" onclick="clearLocalCache()" style="padding:7px 0;font-size:12px;border:none;">
+        <span class="nav-icon">🗑</span>清空本地缓存
       </div>
     </div>
   </div>
@@ -380,36 +342,63 @@
 </div>
 
 <script>
-let allNews = [];
-let activeFilter = '全部';
-let API_KEY = '';
+const LS_CACHE = 'ai_hot_cache_v2';
+const MODULES_UNAVAILABLE = new Set(['收藏', '信源提报', '精选策略', '策略迭代', '系统', '用户']);
+const TOP_SOURCE = /anthropic|openai|deepmind|google|meta|microsoft|nvidia|deepseek|qwen|通义|阿里|字节|moonshot|智谱/i;
+
+const state = {
+  items: [],
+  updatedAt: null,
+  model: '',
+  cached: false,
+  view: '精选',
+  tag: '全部',
+  loading: false,
+  error: null,
+};
 
 // ── Init ──
 window.addEventListener('DOMContentLoaded', () => {
-  API_KEY = localStorage.getItem('ai_hot_api_key') || '';
-  if (API_KEY) {
-    document.getElementById('api-modal').style.display = 'none';
-    loadNews();
-  }
+  restoreCache();
+  loadNews(false);
 });
 
-function saveApiKey() {
-  const val = document.getElementById('api-key-input').value.trim();
-  if (!val.startsWith('sk-ant')) {
-    alert('请输入正确的 Anthropic API Key（以 sk-ant 开头）');
-    return;
+function restoreCache() {
+  try {
+    const raw = localStorage.getItem(LS_CACHE);
+    if (!raw) return;
+    const c = JSON.parse(raw);
+    if (Array.isArray(c.items) && c.items.length) {
+      state.items = c.items;
+      state.updatedAt = c.updatedAt || null;
+      state.model = c.model || '';
+      state.cached = true;
+      render();
+    }
+  } catch {
+    /* 缓存损坏则忽略 */
   }
-  API_KEY = val;
-  localStorage.setItem('ai_hot_api_key', val);
-  document.getElementById('api-modal').style.display = 'none';
-  loadNews();
 }
 
-function resetApiKey() {
-  localStorage.removeItem('ai_hot_api_key');
-  API_KEY = '';
-  document.getElementById('api-key-input').value = '';
-  document.getElementById('api-modal').style.display = 'flex';
+function persistCache(data) {
+  try {
+    localStorage.setItem(LS_CACHE, JSON.stringify({
+      items: data.items,
+      updatedAt: data.updatedAt,
+      model: data.model,
+    }));
+  } catch {
+    /* 超出配额时静默失败 */
+  }
+}
+
+function clearLocalCache() {
+  localStorage.removeItem(LS_CACHE);
+  state.items = [];
+  state.updatedAt = null;
+  state.error = null;
+  render();
+  loadNews(true);
 }
 
 function toggleSidebar() {
@@ -421,185 +410,278 @@ function setNav(el, name) {
   document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('page-title').textContent = name;
-  // Close mobile sidebar
+  state.view = name;
   document.getElementById('sidebar').classList.remove('open');
+  render();
 }
 
 // ── Filter ──
 function setFilter(el, tag) {
   document.querySelectorAll('.tag-btn').forEach(e => e.classList.remove('active'));
   el.classList.add('active');
-  activeFilter = tag;
-  renderNews();
+  state.tag = tag;
+  render();
 }
 
 // ── Load ──
-async function loadNews() {
-  const feed = document.getElementById('feed');
+async function loadNews(force) {
+  if (state.loading) return;
+  state.loading = true;
+  state.error = null;
+
   const btn = document.getElementById('refresh-btn');
   btn.classList.add('spinning');
 
-  feed.innerHTML = `
-    <div class="state-box">
-      <div class="spinner"></div>
-      <div class="state-text">正在抓取最新 AI 资讯...</div>
-      <div class="state-sub">联网搜索中，请稍候</div>
-    </div>`;
-
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric' });
-  document.getElementById('update-time').textContent =
-    '更新于 ' + now.toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' });
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [{
-          role: 'user',
-          content: `今天是${dateStr}。请搜索今天最新的AI热点资讯，包括大模型发布、AI产品更新、研究突破、开源项目等。
-
-返回一个JSON数组，包含10条资讯，每条格式如下：
-{
-  "title": "标题（中文，简洁有力）",
-  "desc": "简介（中文，60字以内，说明核心内容）",
-  "source": "来源网站或媒体名称",
-  "url": "原文链接（如有）",
-  "tags": ["标签1","标签2"],
-  "reason": "推荐理由（20字以内，中文）",
-  "score": 评分数字(60-99)
-}
-
-tags 只从以下选择：Agent、产品更新、大模型、具身智能、开源、研究、工具、搜索
-
-只返回纯JSON数组，不要任何markdown格式或多余文字。`
-        }]
-      })
-    });
-
-    if (res.status === 401) {
-      showError('API Key 无效，请重新设置。', true);
-      return;
-    }
-
-    const data = await res.json();
-    let text = (data.content || [])
-      .filter(b => b.type === 'text')
-      .map(b => b.text)
-      .join('');
-
-    text = text.replace(/```json|```/g, '').trim();
-    const s = text.indexOf('['), e = text.lastIndexOf(']');
-    if (s === -1 || e === -1) throw new Error('no json array');
-
-    allNews = JSON.parse(text.slice(s, e + 1));
-    if (!Array.isArray(allNews) || allNews.length === 0) throw new Error('empty');
-
-  } catch (err) {
-    console.error(err);
-    allNews = fallbackNews();
-    feed.innerHTML = '';
+  if (!state.items.length) {
+    document.getElementById('feed').innerHTML = `
+      <div class="state-box">
+        <div class="spinner"></div>
+        <div class="state-text">正在同步最新 AI 资讯...</div>
+        <div class="state-sub">服务端联网检索中，首次加载约需 20-40 秒</div>
+      </div>`;
   }
 
-  btn.classList.remove('spinning');
-  renderNews();
+  try {
+    const res = await fetch('/api/news' + (force ? '?force=1' : ''), { cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok && !Array.isArray(data.items)) {
+      throw makeError(data.message || `接口返回 ${res.status}`, data.error);
+    }
+    if (!Array.isArray(data.items) || !data.items.length) {
+      throw makeError(data.message || '未返回任何资讯', data.error || 'EMPTY');
+    }
+
+    state.items = data.items;
+    state.updatedAt = data.updatedAt || null;
+    state.model = data.model || '';
+    state.cached = !!data.cached;
+    // 服务端降级返回旧数据时，仍然提示错误但不遮断内容
+    state.error = data.error ? { message: data.error, code: 'STALE' } : null;
+    persistCache(data);
+  } catch (err) {
+    state.error = { message: err.message || '请求失败', code: err.code || 'NETWORK' };
+  } finally {
+    state.loading = false;
+    btn.classList.remove('spinning');
+    render();
+  }
 }
 
-function showError(msg, showReset) {
-  const feed = document.getElementById('feed');
-  document.getElementById('refresh-btn').classList.remove('spinning');
-  feed.innerHTML = `
-    <div class="state-box">
-      <div style="font-size:28px">⚠️</div>
-      <div class="state-text">${msg}</div>
-      ${showReset ? `<button class="btn" onclick="resetApiKey()" style="margin-top:6px;">重新设置 API Key</button>` : ''}
-    </div>`;
+function makeError(message, code) {
+  const e = new Error(message);
+  e.code = code || 'UNKNOWN';
+  return e;
+}
+
+const ERROR_HINTS = {
+  UPSTREAM_FORBIDDEN: 'Anthropic 拒绝了服务端请求（403）。常见于部署区域受限或 Key 权限不足，请检查函数运行区域。',
+  UPSTREAM_AUTH: '服务端 API Key 无效，请检查 ANTHROPIC_API_KEY 环境变量。',
+  NO_API_KEY: '服务端尚未配置 ANTHROPIC_API_KEY 环境变量。',
+  UPSTREAM_RATE_LIMIT: '上游触发限流，请稍后重试。',
+  UPSTREAM_TIMEOUT: '上游响应超时，联网检索耗时过长。',
+  UPSTREAM_UNREACHABLE: '服务端无法连接 Anthropic API，请检查网络出口。',
+  MODEL_NOT_FOUND: '当前模型 ID 已下线，请更新 MODEL_CHAIN 配置。',
+  PARSE_FAILED: '模型输出不是合法 JSON，本次抓取失败。',
+  NO_RESULT: '本次检索未获得有效资讯。',
+  EMPTY: '接口未返回任何数据。',
+};
+
+function errorHint(code) {
+  return ERROR_HINTS[code] || '';
 }
 
 // ── Render ──
-function renderNews() {
+function render() {
+  updateTopbar();
   const feed = document.getElementById('feed');
-  const filtered = activeFilter === '全部'
-    ? allNews
-    : allNews.filter(n => (n.tags || []).includes(activeFilter));
 
-  if (!filtered.length) {
-    feed.innerHTML = `<div class="state-box"><div class="state-text">该分类暂无资讯</div></div>`;
+  if (MODULES_UNAVAILABLE.has(state.view)) {
+    feed.innerHTML = `
+      <div class="state-box">
+        <div style="font-size:26px;opacity:.45">▤</div>
+        <div class="state-text">「${escHtml(state.view)}」模块尚未接入数据源</div>
+        <div class="state-sub">当前版本仅「资讯流」可用</div>
+      </div>`;
     return;
   }
 
-  const now = new Date();
-  const todayStr = now.toLocaleDateString('zh-CN', { month:'numeric', day:'numeric' });
+  if (!state.items.length) {
+    if (state.loading) return;
+    feed.innerHTML = errorBoxHtml();
+    return;
+  }
 
-  let html = `<div class="date-label">${todayStr} · 共 ${filtered.length} 条</div>`;
+  if (state.view === '信源') {
+    renderSources();
+    return;
+  }
 
-  filtered.forEach((item, i) => {
-    const isLast = i === filtered.length - 1;
-    const h = String(Math.max(0, 6 - Math.floor(i * 0.7))).padStart(2,'0');
-    const m = String(Math.floor(Math.random() * 60)).padStart(2,'0');
-    const tags = (item.tags || []).map(t => `<span class="card-tag">${t}</span>`).join('');
-    const score = Number(item.score) || 72;
-    const isHigh = score >= 80;
+  const list = applyView();
+  if (!list.length) {
+    feed.innerHTML = `${bannerHtml()}
+      <div class="state-box"><div class="state-text">该分类暂无资讯</div></div>`;
+    return;
+  }
+
+  renderList(list);
+}
+
+function applyView() {
+  let list = state.items;
+
+  if (state.view === '精选') {
+    list = list.filter(n => n.score >= 80);
+  } else if (state.view === '低粉爆文') {
+    list = list.filter(n => n.score >= 70 && !TOP_SOURCE.test(n.source || ''));
+  }
+
+  if (state.tag !== '全部') {
+    list = list.filter(n => (n.tags || []).includes(state.tag));
+  }
+
+  return list;
+}
+
+function renderList(list) {
+  const todayStr = new Date().toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+  const avg = Math.round(list.reduce((a, b) => a + b.score, 0) / list.length);
+
+  let html = bannerHtml();
+  html += `<div class="date-label">${todayStr} · 共 ${list.length} 条 · 平均 ${avg} 分</div>`;
+
+  list.forEach((item, i) => {
+    const isLast = i === list.length - 1;
+    const tags = (item.tags || []).map(t => `<span class="card-tag">${escHtml(t)}</span>`).join('');
+    const isHigh = item.score >= 80;
 
     html += `
       <div class="tl-item">
         <div class="tl-left">
-          <span class="tl-time">${h}:${m}</span>
+          <span class="tl-time" title="${escHtml(fullTime(item.publishedAt))}">${clockOf(item.publishedAt)}</span>
           <div class="tl-dot"></div>
           ${isLast ? '' : '<div class="tl-line"></div>'}
         </div>
-        <div class="tl-card" onclick="openItem(${i})">
-          <div class="card-source">${item.source || 'AI资讯'}</div>
+        <div class="tl-card" onclick="openItem('${escHtml(item.id)}')">
+          <div class="card-source">${escHtml(item.source || 'AI 资讯')}</div>
           <div class="card-title">${escHtml(item.title)}</div>
           <div class="card-desc">${escHtml(item.desc || '')}</div>
           <div class="card-tags">${tags}</div>
           <div class="card-footer">
-            <div class="card-score ${isHigh ? 'high' : ''}">${score}</div>
+            <div class="card-score ${isHigh ? 'high' : ''}">${item.score}</div>
             <div class="card-reason">${escHtml(item.reason || '')}</div>
           </div>
         </div>
       </div>`;
   });
 
-  feed.innerHTML = html;
+  document.getElementById('feed').innerHTML = html;
+}
+
+function renderSources() {
+  const map = new Map();
+  state.items.forEach(it => {
+    const k = it.source || '未知信源';
+    const cur = map.get(k) || { count: 0, sum: 0 };
+    cur.count += 1;
+    cur.sum += it.score;
+    map.set(k, cur);
+  });
+
+  const rows = [...map.entries()].sort((a, b) => b[1].count - a[1].count || b[1].sum - a[1].sum);
+
+  let html = `${bannerHtml()}<div class="date-label">${rows.length} 个信源 · ${state.items.length} 条资讯</div>`;
+  rows.forEach(([name, v]) => {
+    const avg = Math.round(v.sum / v.count);
+    html += `
+      <div class="tl-item">
+        <div class="tl-left"><span class="tl-time">${v.count}</span><div class="tl-dot"></div></div>
+        <div class="tl-card" style="cursor:default">
+          <div class="card-title" style="margin-bottom:4px">${escHtml(name)}</div>
+          <div class="card-footer">
+            <div class="card-score ${avg >= 80 ? 'high' : ''}">${avg}</div>
+            <div class="card-reason">${v.count} 条 · 均分 ${avg}</div>
+          </div>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('feed').innerHTML = html;
+}
+
+function bannerHtml() {
+  if (!state.error) return '';
+  const hint = errorHint(state.error.code);
+  return `
+    <div class="err-banner">
+      <div class="err-title">⟳ 本次刷新未完成：${escHtml(state.error.message)}</div>
+      ${hint ? `<div class="err-hint">${escHtml(hint)}</div>` : ''}
+      <div class="err-hint">当前展示的是最近一次成功同步的数据。</div>
+    </div>`;
+}
+
+function errorBoxHtml() {
+  const e = state.error;
+  if (!e) {
+    return `<div class="state-box"><div class="state-text">暂无资讯</div></div>`;
+  }
+  const hint = errorHint(e.code);
+  return `
+    <div class="state-box">
+      <div style="font-size:26px">⚠️</div>
+      <div class="state-text">${escHtml(e.message)}</div>
+      ${hint ? `<div class="state-sub" style="max-width:480px;text-align:center;line-height:1.75">${escHtml(hint)}</div>` : ''}
+      <div class="state-sub">错误码：${escHtml(e.code || 'UNKNOWN')}</div>
+      <button class="btn" onclick="loadNews(true)" style="margin-top:4px">重试</button>
+    </div>`;
+}
+
+function updateTopbar() {
+  const el = document.getElementById('update-time');
+  if (!state.updatedAt) {
+    el.textContent = '';
+    return;
+  }
+  const d = new Date(state.updatedAt);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  el.textContent = `更新于 ${hh}:${mm}${state.cached ? ' · 缓存' : ''}`;
+  el.title = `数据时间：${fullTime(state.updatedAt)}${state.model ? `\n生成模型：${state.model}` : ''}`;
+}
+
+function clockOf(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function fullTime(iso) {
+  if (!iso) return '时间未知';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '时间未知';
+  return d.toLocaleString('zh-CN', {
+    month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
 }
 
 function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-function openItem(i) {
-  const item = allNews[i];
-  if (item && item.url && item.url.startsWith('http')) {
-    window.open(item.url, '_blank');
+function openItem(id) {
+  const item = state.items.find(x => x.id === id);
+  if (!item) return;
+  if (item.url) {
+    window.open(item.url, '_blank', 'noopener');
   } else {
-    alert('该资讯暂无原文链接。\n\n标题：' + (item?.title || ''));
+    alert(`该资讯暂无原文链接\n\n标题：${item.title}`);
   }
-}
-
-// ── Fallback ──
-function fallbackNews() {
-  return [
-    { title: 'Claude 4 Sonnet 正式发布，代码能力大幅提升', desc: 'Anthropic发布Claude 4 Sonnet，在代码生成、推理和多步骤任务处理方面有显著进步，支持更长上下文窗口。', source: 'Anthropic Blog', url: 'https://anthropic.com', tags:['产品更新','大模型'], reason:'代码能力跃升，多步骤任务更强', score:88 },
-    { title: 'Google Gemini 3.1 Pro 上线，ARC-AGI-2得分77.1%', desc: 'Google DeepMind发布Gemini 3.1 Pro，拥有100万token上下文，ARC-AGI-2得分77.1%，与GPT-5.4并列基准榜第一。', source: 'Google DeepMind', url: 'https://deepmind.google', tags:['大模型','产品更新'], reason:'百万token上下文，推理基准全球第一', score:85 },
-    { title: 'Chrome 推出 AI Mode：地址栏变身智能搜索入口', desc: 'Chrome浏览器正式推出AI Mode，通过AI技术重构网页浏览体验，用户无需跳转即可进行智能对话式搜索。', source: 'Google Blog', url: 'https://blog.google', tags:['产品更新','搜索'], reason:'Chrome地址栏变身AI搜索入口', score:78 },
-    { title: 'video-use 开源：Claude Code 自动剪辑视频', desc: 'browser-use团队发布video-use，把素材丢进文件夹，Claude自动裁剪口头语、调色、加字幕，输出final.mp4。', source: 'GitHub', url: 'https://github.com', tags:['工具','开源','Agent'], reason:'AI自动剪辑视频，素材进成品出', score:76 },
-    { title: 'Meta Llama 4 开源，支持多模态与本地部署', desc: 'Meta发布Llama 4系列多个规模版本，全面支持多模态输入，开发者可本地运行，开源社区反响热烈。', source: 'Meta AI', url: 'https://ai.meta.com', tags:['开源','大模型'], reason:'Meta旗舰开源，本地跑无需API', score:82 },
-    { title: 'OpenAI 推出 GPT-5.4，专注企业级推理任务', desc: 'OpenAI发布GPT-5.4，针对企业级复杂推理场景优化，在法律文书、财务分析等专业领域表现突出。', source: 'OpenAI Blog', url: 'https://openai.com', tags:['大模型','产品更新'], reason:'企业推理专项优化，专业任务更强', score:80 },
-    { title: '具身智能新突破：机器人完成精细外科手术操作', desc: '斯坦福团队展示AI驱动机器人完成精细外科手术，操作精度达到人类外科医生水平，引发医疗AI广泛讨论。', source: 'Stanford AI Lab', url: 'https://ai.stanford.edu', tags:['具身智能','研究'], reason:'机器人手术精度达人类水平', score:74 },
-    { title: 'Anthropic 发布 Agent 构建框架正式版', desc: 'Anthropic推出面向开发者的Agent构建工具正式版，支持工具调用、持久记忆和多步推理，大幅降低开发门槛。', source: 'Anthropic', url: 'https://anthropic.com', tags:['Agent','产品更新'], reason:'官方框架，Agent开发更简单', score:75 },
-    { title: 'DeepSeek R2 发布，推理速度提升300%', desc: 'DeepSeek发布R2推理模型，推理速度较上代提升300%，成本大幅降低，在数学和代码基准上表现优异。', source: 'DeepSeek', url: 'https://deepseek.com', tags:['大模型','开源'], reason:'推理速度提升3倍，成本更低', score:83 },
-    { title: 'Perplexity AI 获得新一轮融资，估值达150亿美元', desc: 'AI搜索引擎Perplexity AI完成新一轮融资，估值达150亿美元，计划扩大模型自研和国际市场布局。', source: 'TechCrunch', url: 'https://techcrunch.com', tags:['产品更新','搜索'], reason:'AI搜索赛道持续升温', score:70 },
-  ];
 }
 </script>
 </body>
