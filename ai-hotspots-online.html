@@ -1,0 +1,3447 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI 热点在线版</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #fbfaf7;
+        --ink: #14211f;
+        --muted: #69736f;
+        --line: #ded9ce;
+        --soft: #f0ede5;
+        --panel: #ffffff;
+        --accent: #c45f32;
+        --green: #517247;
+        --blue: #2d62b7;
+        --danger: #a34032;
+      }
+
+
+      body[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #13191c;
+        --ink: #e8eeec;
+        --muted: #9aa8a4;
+        --line: #2d3a3d;
+        --soft: #1d2629;
+        --panel: #1b2427;
+        --accent: #e08a5c;
+        --green: #7fae77;
+        --blue: #7fa8e8;
+        --danger: #e0705c;
+      }
+      body[data-theme="dark"] .stream .item { background: var(--panel); border-color: var(--line); box-shadow: none; }
+      body[data-theme="dark"] .bucket-title { color: var(--ink); }
+      body[data-theme="dark"] .bucket-title small { color: var(--muted); }
+      body[data-theme="dark"] .timeline-rail { color: var(--muted); }
+      body[data-theme="dark"] .timeline-rail:before { background: var(--line); }
+      body[data-theme="dark"] .timeline-rail:after { box-shadow: 0 0 0 4px var(--bg); }
+      body[data-theme="dark"] .date-group > summary::before { color: var(--muted); }
+      body[data-theme="dark"] .qr-box { background: var(--panel); }
+      body[data-theme="dark"] .topic-tab.active { background: var(--ink); color: var(--bg); }
+      body[data-theme="dark"] .side-item.active { color: var(--ink); }
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100svh;
+        background:
+          radial-gradient(circle at 12% -10%, rgba(196, 95, 50, 0.12), transparent 30%),
+          radial-gradient(circle at 95% 8%, rgba(81, 114, 71, 0.13), transparent 28%),
+          var(--bg);
+        color: var(--ink);
+        font-family: "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+      }
+
+      a {
+        color: inherit;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 3px;
+      }
+
+      main {
+        width: min(1180px, calc(100vw - 24px));
+        margin: 0 auto;
+        padding: 20px 0 40px;
+      }
+
+      header {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 8vw, 54px);
+        line-height: 0.98;
+        letter-spacing: 0;
+      }
+
+      .subline {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .timebar,
+      .controls,
+      .meta,
+      .scores {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .clock,
+      .meta-chip,
+      .chip,
+      .toggle,
+      .refresh,
+      .lang button {
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+        color: var(--ink);
+        font: inherit;
+        font-size: 13px;
+      }
+
+      .clock,
+      .meta-chip,
+      .chip,
+      .toggle,
+      .refresh {
+        display: inline-flex;
+        align-items: center;
+        padding: 0 12px;
+      }
+
+      .controls {
+        justify-content: space-between;
+      }
+
+      .control-group {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .lang {
+        display: inline-grid;
+        grid-template-columns: 1fr 1fr;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .lang button,
+      .toggle,
+      .refresh {
+        cursor: pointer;
+      }
+
+      .lang button {
+        min-width: 56px;
+        border: 0;
+        background: transparent;
+      }
+
+      .lang button.active,
+      .toggle.active {
+        background: var(--ink);
+        color: white;
+        border-color: var(--ink);
+      }
+
+      .refresh {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+        font-weight: 700;
+      }
+
+      .refresh:disabled {
+        cursor: wait;
+        opacity: 0.72;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1px;
+        margin: 18px 0;
+        border: 1px solid var(--line);
+        background: var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .metric {
+        background: var(--panel);
+        padding: 16px;
+      }
+
+      .metric b {
+        display: block;
+        font-size: 24px;
+        line-height: 1;
+      }
+
+      .metric span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .new-strip,
+      .status-strip {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(196, 95, 50, 0.08), rgba(81, 114, 71, 0.05));
+      }
+
+      .status-strip {
+        color: var(--muted);
+      }
+
+      .status-strip.error {
+        color: var(--danger);
+      }
+
+      .sources-panel {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+
+      .source-card {
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.82);
+      }
+
+      .source-card strong,
+      .source-card a {
+        display: block;
+      }
+
+      .source-card strong {
+        font-size: 14px;
+        line-height: 1.35;
+      }
+
+      .source-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .state-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 0 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel);
+      }
+
+      .state-pill.ok {
+        color: var(--green);
+        border-color: rgba(81, 114, 71, 0.28);
+        background: rgba(81, 114, 71, 0.08);
+      }
+
+      .state-pill.error {
+        color: var(--danger);
+        border-color: rgba(163, 64, 50, 0.28);
+        background: rgba(163, 64, 50, 0.08);
+      }
+
+      .state-pill.pending {
+        color: var(--muted);
+      }
+
+      .source-error {
+        margin-top: 8px;
+        color: var(--danger);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .new-strip[hidden],
+      .status-strip[hidden],
+      .sources-panel[hidden] {
+        display: none;
+      }
+
+      .new-label,
+      .chip.new {
+        background: rgba(196, 95, 50, 0.12);
+        color: var(--accent);
+        border-color: rgba(196, 95, 50, 0.22);
+        font-weight: 700;
+      }
+
+      .new-label {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+      }
+
+      .stream {
+        display: grid;
+        gap: 16px;
+      }
+
+      .bucket {
+        display: grid;
+        gap: 12px;
+      }
+
+      .bucket-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .bucket-title::after {
+        content: "";
+        height: 1px;
+        flex: 1;
+        background: var(--line);
+      }
+
+      article {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 16px;
+        padding: 16px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .rank {
+        display: grid;
+        align-content: start;
+        gap: 8px;
+      }
+
+      .rank b {
+        font-size: 26px;
+        line-height: 1;
+      }
+
+      .score {
+        width: 52px;
+        height: 52px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at center, var(--bg) 59%, transparent 60%),
+          conic-gradient(var(--accent) var(--angle), var(--soft) 0);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: clamp(19px, 4.5vw, 28px);
+        line-height: 1.2;
+      }
+
+      .item p {
+        margin: 10px 0 0;
+        color: #3d4945;
+        line-height: 1.6;
+      }
+
+      .chip.source {
+        color: var(--blue);
+      }
+
+      .empty {
+        padding: 48px 0;
+        color: var(--muted);
+        border-bottom: 1px solid var(--line);
+      }
+
+      @media (max-width: 720px) {
+        main {
+          width: min(100vw - 18px, 720px);
+          padding-top: 14px;
+        }
+
+        .controls {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .control-group,
+        .refresh,
+        .toggle {
+          width: 100%;
+        }
+
+        .summary {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .sources-panel {
+          grid-template-columns: 1fr;
+        }
+
+        article {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        .rank {
+          grid-template-columns: auto auto;
+          align-items: center;
+        }
+      }
+      /* ---------------- 连接设置面板 ---------------- */
+      .settings-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(20, 33, 31, 0.42);
+        backdrop-filter: blur(3px);
+      }
+
+      .settings-panel {
+        width: min(580px, 100%);
+        max-height: min(84vh, 780px);
+        display: flex;
+        flex-direction: column;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 24px 60px rgba(20, 33, 31, 0.18);
+        overflow: hidden;
+      }
+
+      .settings-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 18px 20px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .settings-head h2 {
+        margin: 0;
+        font-size: 17px;
+        letter-spacing: -0.01em;
+      }
+
+      .settings-close {
+        width: 30px;
+        height: 30px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--soft);
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      .settings-close:hover {
+        color: var(--ink);
+        border-color: var(--accent);
+      }
+
+      .settings-body {
+        display: grid;
+        gap: 16px;
+        padding: 16px 20px 20px;
+        overflow-y: auto;
+      }
+
+      .settings-note {
+        margin: 0;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--soft);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.65;
+      }
+
+      .settings-group {
+        display: grid;
+        gap: 10px;
+        margin: 0;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+
+      .settings-group legend {
+        padding: 0 6px;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .settings-group label {
+        display: grid;
+        gap: 5px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .settings-group input {
+        width: 100%;
+        padding: 9px 11px;
+        font: inherit;
+        font-size: 13px;
+        color: var(--ink);
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        outline: none;
+      }
+
+      .settings-group input:focus {
+        border-color: var(--accent);
+      }
+
+      .settings-hint {
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.55;
+      }
+
+      .settings-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .settings-test {
+        padding: 5px 12px;
+        font: inherit;
+        font-size: 12px;
+        color: var(--ink);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        cursor: pointer;
+      }
+
+      .settings-test:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .settings-test:disabled {
+        cursor: wait;
+        opacity: 0.6;
+      }
+
+      .settings-result {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .settings-result.ok {
+        color: var(--green);
+      }
+
+      .settings-result.fail {
+        color: var(--danger);
+      }
+
+      .settings-foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 14px 20px;
+        border-top: 1px solid var(--line);
+        background: var(--soft);
+      }
+
+      .settings-btn {
+        padding: 9px 18px;
+        font: inherit;
+        font-size: 13px;
+        color: var(--ink);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        cursor: pointer;
+      }
+
+      .settings-btn.primary {
+        color: #fff;
+        background: var(--accent);
+        border-color: var(--accent);
+        font-weight: 700;
+      }
+
+      .settings-btn:hover {
+        filter: brightness(0.97);
+      }
+
+      .settings-switch {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center;
+        gap: 8px;
+        color: var(--ink) !important;
+        font-size: 13px !important;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .settings-switch input {
+        width: 16px !important;
+        height: 16px;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
+
+      .settings-modal[hidden] {
+        display: none;
+      }
+
+      /* ---------------- 手机查看面板 ---------------- */
+      .mobile-panel {
+        width: min(430px, 100%);
+      }
+
+      .mobile-body {
+        text-align: center;
+      }
+
+      .mobile-body .settings-note {
+        text-align: left;
+      }
+
+      .qr-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 220px;
+        padding: 12px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+
+      .qr-box img {
+        width: 196px;
+        height: 196px;
+        display: block;
+      }
+
+      .mobile-urls {
+        display: grid;
+        gap: 8px;
+      }
+
+      .mobile-url {
+        padding: 9px 12px;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        color: var(--ink);
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        word-break: break-all;
+        user-select: all;
+      }
+
+      /* ---------------- AI 增强展示 ---------------- */
+      .ai-brief {
+        margin: 0 0 18px;
+        padding: 14px 16px;
+        border: 1px solid rgba(81, 114, 71, 0.28);
+        border-left: 3px solid var(--green);
+        border-radius: 12px;
+        background: rgba(81, 114, 71, 0.06);
+        font-size: 13px;
+        line-height: 1.75;
+        color: var(--ink);
+      }
+
+      .ai-brief b {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--green);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+      }
+
+      .ai-reason {
+        margin-top: 8px;
+        padding-left: 9px;
+        border-left: 2px solid var(--green);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .chip.ai {
+        background: rgba(81, 114, 71, 0.1);
+        border-color: rgba(81, 114, 71, 0.35);
+        color: var(--green);
+      }
+
+      .date-group > summary { cursor:pointer; list-style:none; user-select:none; }
+      .date-group > summary::-webkit-details-marker { display:none; }
+      .date-group > summary::before { content:"›"; color:#72847f; display:inline-block; margin-right:12px; transition:transform .18s; }
+      .date-group[open] > summary::before { transform:rotate(90deg); }
+      .date-group > summary:focus-visible { outline:2px solid #137f7c; outline-offset:4px; }
+      /* 日期分组时间线 */
+      .stream { display:block; }
+      .bucket-title { color:#263a3b; font-size:21px; font-weight:700; margin:30px 0 14px; text-transform:none; }
+      .bucket-title::after { display:none; }
+      .bucket-title small { color:#75817e; font-size:13px; font-weight:400; }
+      .stream article { position:relative; display:grid; grid-template-columns:96px minmax(0,1fr); gap:0; padding:0 0 16px; border:0; }
+      .timeline-rail { position:relative; padding:18px 20px 0 0; color:#63736f; font-size:14px; font-weight:700; font-variant-numeric:tabular-nums; }
+      .timeline-rail:before { content:""; position:absolute; right:8px; top:26px; bottom:-18px; width:1px; background:#cbdad5; }
+      .timeline-rail:after { content:""; position:absolute; right:4px; top:23px; width:9px; height:9px; border-radius:50%; background:#137f7c; box-shadow:0 0 0 4px var(--bg); }
+      .stream .item { background:#fff; border:1px solid #dbe4df; border-radius:14px; padding:20px 22px; box-shadow:0 4px 16px rgba(35,67,56,.04); min-width:0; }
+      .stream .item h2 { font-size:clamp(18px,2.3vw,23px); line-height:1.45; }
+      .stream .item .meta { margin-bottom:12px; }
+      @media(max-width:720px) { .stream article { grid-template-columns:64px minmax(0,1fr); gap:0; } .timeline-rail { font-size:12px; padding-right:16px; } .stream .item { padding:15px; } .bucket-title { font-size:18px; } }
+
+      /* ---------------- 侧边栏（参照 aihot.news 视觉规范） ---------------- */
+      :root {
+        --ah-bg: #faf9f6;
+        --ah-sidebar: #fdfdfb;
+        --ah-surface: #ffffff;
+        --ah-sunk: #f3f3ef;
+        --ah-ink: #202a30;
+        --ah-ink-3: #59656b;
+        --ah-ink-4: #657176;
+        --ah-line: #dfe4e1;
+        --ah-accent: #176b75;
+        --ah-accent-soft: rgba(23,107,117,.10);
+      }
+      #menuToggle {
+        position: fixed; left: 14px; top: 14px; z-index: 60;
+        display: flex; align-items: center; justify-content: center;
+        width: 34px; height: 34px; padding: 0;
+        border: 1px solid var(--ah-line); border-radius: 9px;
+        background: var(--ah-surface); color: var(--ah-ink-3);
+        font-size: 15px; line-height: 1; cursor: pointer;
+      }
+      #menuToggle:hover { background: var(--ah-sunk); color: var(--ah-ink); }
+      .sidebar {
+        position: fixed; left: 0; top: 0; bottom: 0; z-index: 55;
+        width: 180px; padding: 60px 12px max(14px, env(safe-area-inset-bottom));
+        background: var(--ah-sidebar); border-right: 1px solid var(--ah-line);
+        overflow-y: auto; transition: width .18s ease, transform .22s ease;
+      }
+      .side-title { padding: 14px 10px 4px; color: var(--ah-ink-4); font-size: 11px; letter-spacing: .04em; }
+      .side-nav { display: flex; flex-direction: column; gap: 4px; }
+      .side-item {
+        display: flex; align-items: center; gap: 10px; width: 100%; height: 40px;
+        padding: 0 10px; border: 0; border-radius: 10px;
+        background: transparent; color: var(--ah-ink-3);
+        font: inherit; font-size: 14px; font-weight: 500; text-align: left;
+        text-decoration: none; cursor: pointer;
+        transition: background-color .15s ease, color .15s ease;
+      }
+      .side-item:hover { background: var(--ah-sunk); color: var(--ah-ink); }
+      .side-item.active { background: var(--ah-accent-soft); color: var(--ah-ink); font-weight: 600; }
+      .side-icon { display: flex; width: 22px; flex: 0 0 22px; justify-content: center; color: inherit; }
+      .side-item.active .side-icon { color: var(--ah-accent); }
+      .side-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .side-count { margin-left: auto; font-size: 11px; color: var(--ah-ink-4); }
+      .side-scrim { display: none; }
+      @media (min-width: 901px) { body { padding-left: 180px; } }
+      body.side-collapsed { padding-left: 64px; }
+      .sidebar.collapsed { width: 64px; padding-left: 8px; padding-right: 8px; }
+      .sidebar.collapsed .side-title,
+      .sidebar.collapsed .side-label,
+      .sidebar.collapsed .side-count { display: none; }
+      .sidebar.collapsed .side-item { justify-content: center; padding: 0; }
+      @media (max-width: 900px) {
+        body, body.side-collapsed { padding-left: 0; }
+        header { padding-left: 46px; }
+        .sidebar, .sidebar.collapsed {
+          width: 200px; padding-left: 12px; padding-right: 12px;
+          transform: translateX(-100%); box-shadow: 0 12px 40px rgba(20,33,31,.12);
+        }
+        body.side-open .sidebar { transform: translateX(0); }
+        .sidebar.collapsed .side-title,
+        .sidebar.collapsed .side-label,
+        .sidebar.collapsed .side-count { display: revert; }
+        .sidebar.collapsed .side-item { justify-content: flex-start; padding: 0 10px; }
+        .side-scrim { position: fixed; inset: 0; z-index: 50; background: rgba(20,33,31,.35); }
+        body.side-open .side-scrim { display: block; }
+      }
+
+      /* ---------------- 关键词分类 + 搜索 ---------------- */
+      .topic-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 18px 0 14px; }
+      .topic-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px;
+                    background: var(--panel); border: 1px solid var(--line); border-radius: 999px; }
+      .topic-tab { padding: 6px 14px; border: 0; border-radius: 999px; background: transparent;
+                   color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
+      .topic-tab:hover { color: var(--ink); }
+      .topic-tab.active { background: var(--ink); color: #fff; }
+      .topic-search { flex: 1 1 180px; min-width: 150px; padding: 9px 14px;
+                      border: 1px solid var(--line); border-radius: 999px;
+                      background: var(--panel); color: var(--ink); font: inherit; font-size: 13px; outline: none; }
+      .topic-search:focus { border-color: var(--accent); }
+
+      /* ---------------- 当前热点 / AI 日报 ---------------- */
+      .hot-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+      .hot-main .hot-title { flex: initial; display: block; }
+      .hot-meta { color: var(--muted); font-size: 11px; font-weight: 400; line-height: 1.4; opacity: .85; }
+      .hot-panel, .brief-panel { background: var(--panel); border: 1px solid var(--line);
+                                 border-radius: 14px; padding: 16px 18px; margin-bottom: 16px; }
+      .panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+      .panel-head h2 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+      .panel-head h2::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--danger); }
+      .panel-head .hint { color: var(--muted); font-size: 11px; }
+      .hot-list { list-style: none; margin: 0; padding: 0; }
+      .hot-row { display: flex; align-items: center; gap: 12px; padding: 8px 6px; border-radius: 8px; }
+      .hot-row:hover { background: var(--soft); }
+      .hot-rank { width: 20px; color: var(--muted); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+      .hot-row:nth-child(1) .hot-rank { color: var(--danger); }
+      .hot-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+                   white-space: nowrap; font-size: 14px; text-decoration: none; }
+      .hot-title:hover { color: var(--accent); }
+      .hot-heat { flex: 0 0 auto; color: var(--accent); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+      .fav-btn { flex: 0 0 auto; width: 28px; height: 28px; border: 1px solid var(--line);
+                 border-radius: 8px; background: var(--panel); color: var(--muted);
+                 font-size: 14px; line-height: 1; cursor: pointer; }
+      .fav-btn:hover { border-color: var(--accent); color: var(--accent); }
+      .fav-btn.on { background: rgba(196,95,50,.12); border-color: var(--accent); color: var(--accent); }
+      .stream .item { position: relative; }
+      .stream .item h2 { padding-right: 44px; }
+      .card-fav { position: absolute; right: 18px; top: 18px; }
+      .brief-text { color: var(--ink); font-size: 13px; line-height: 1.8; }
+      .brief-text .empty { color: var(--muted); }
+      @media (max-width: 720px) {
+        .hot-title { font-size: 13px; } .hot-heat { font-size: 12px; }
+        .card-fav { right: 12px; top: 12px; }
+        .topic-tabs { border-radius: 12px; }
+      }
+      .settings-group textarea {
+        width: 100%; margin-top: 6px; padding: 9px 11px;
+        border: 1px solid var(--line); border-radius: 9px;
+        background: var(--panel); color: var(--ink);
+        font: inherit; font-size: 12px; line-height: 1.6; resize: vertical;
+      }
+      .settings-group textarea:focus { outline: none; border-color: var(--accent); }
+      .feed-picks { margin-top: 10px; }
+      .feed-picks-title { color: var(--muted); font-size: 11px; margin-bottom: 6px; }
+      .feed-picks-list { display: flex; flex-wrap: wrap; gap: 6px; }
+      .feed-chip {
+        padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px;
+        background: var(--panel); color: var(--ink); font: inherit; font-size: 12px; cursor: pointer;
+      }
+      .feed-chip:hover { border-color: var(--accent); color: var(--accent); }
+      .site-logo { width: 56px; height: 56px; border-radius: 14px; object-fit: contain; display: block; margin-bottom: 10px; }
+      .brand-logo-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+      .brand-logo-preview { width: 56px; height: 56px; border-radius: 12px; border: 1px solid var(--line); object-fit: contain; background: var(--panel); }
+      .settings-group input[type="file"] { padding: 7px 9px; font-size: 12px; }
+      .side-bottom { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--ah-line); }
+      @media (max-width: 900px) {
+        .side-bottom { margin-top: 0; padding-top: 0; padding-left: 8px; border-top: 0; border-left: 1px solid var(--ah-line); }
+      }
+    </style>
+  </head>
+  <body>
+    <button id="menuToggle" type="button" aria-label="展开或收起侧边菜单">☰</button>
+    <div class="side-scrim" id="sideScrim"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="side-title">内容</div>
+      <nav class="side-nav" aria-label="主导航">
+        <button class="side-item" data-view="featured" data-zh="精选" data-en="Featured" type="button"><span class="side-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg></span><span class="side-label">精选</span></button>
+        <button class="side-item" data-view="all" data-zh="全部 AI 动态" data-en="All AI news" type="button"><span class="side-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r=".8"/><circle cx="3.5" cy="12" r=".8"/><circle cx="3.5" cy="18" r=".8"/></svg></span><span class="side-label">全部 AI 动态</span></button>
+        <button class="side-item" data-view="hot" data-zh="热点榜" data-en="Trending" type="button"><span class="side-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a7 7 0 0 0 7-7c0-4-3-6-5-9 0 3-2 4-3 5-1-1-1-3-1-4-2 2-5 5-5 8a7 7 0 0 0 7 7z"/></svg></span><span class="side-label">热点榜</span></button>
+        <button class="side-item" data-view="daily" data-zh="AI 日报" data-en="AI daily" type="button"><span class="side-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v15H5z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></span><span class="side-label">AI 日报</span></button>
+        <button class="side-item" data-view="topic" data-zh="主题" data-en="Topics" type="button"><span class="side-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg></span><span class="side-label">主题</span></button>
+        <button class="side-item" data-view="fav" data-zh="收藏" data-en="Saved" type="button"><span class="side-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span><span class="side-label">收藏</span><span class="side-count" id="favCount"></span></button>
+      </nav>
+      <div class="side-bottom">
+        <button class="side-item" id="openSettings" data-zh="设置" data-en="Settings" type="button" title="配置抓取代理与接口凭证"><span class="side-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9v0a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z"/></svg></span><span class="side-label">设置</span></button>
+      </div>
+    </aside>
+    <main>
+      <header>
+        <div>
+          <img id="siteLogo" class="site-logo" alt="" hidden />
+          <h1 id="title">AI 热点在线版</h1>
+          <div class="subline" id="subtitle">上传到静态网页空间后，手机也能点刷新抓最新热点</div>
+        </div>
+        <div class="timebar">
+          <span class="clock" id="liveClock">--</span>
+          <span class="meta-chip" id="lastUpdated">--</span>
+        </div>
+        <div class="controls">
+          <div class="control-group">
+            <div class="lang" aria-label="Language">
+              <button id="langZh" type="button">中</button>
+              <button id="langEn" type="button">EN</button>
+            </div>
+            <button class="toggle" id="themeToggle" type="button" title="切换深浅色背景" aria-label="切换深浅色背景">☾</button>
+            <label class="toggle" for="dateFilter"><span id="dateLabel">选择日期</span> <input id="dateFilter" type="date" aria-label="选择资讯日期"></label>
+            <button class="toggle" id="clearDate" type="button">全部日期</button>
+            <button class="toggle" id="toggleNew" type="button">只看新增</button>
+            <button class="toggle" id="toggleOfficial" type="button" title="只看 OpenAI / Anthropic / 虎嗅 的最新官方资讯">官方资讯</button>
+            <button class="toggle" id="openMobile" type="button" title="手机扫码查看实时热点">📱 手机查看</button>
+          </div>
+          <button class="refresh" id="refresh" type="button">刷新热点</button>
+        </div>
+      </header>
+
+      <section class="summary">
+        <div class="metric"><b id="metricCount">--</b><span id="metricCountLabel">候选热点</span></div>
+        <div class="metric"><b id="metricSources">--</b><span id="metricSourcesLabel">数据源</span></div>
+        <div class="metric"><b id="metricUpdated">--</b><span id="metricUpdatedLabel">热点时间</span></div>
+        <div class="metric"><b id="metricMode">--</b><span id="metricModeLabel">刷新模式</span></div>
+      </section>
+
+      <section class="new-strip" id="newStrip" hidden>
+        <span class="new-label" id="newLabel">新增</span>
+        <span id="newText">--</span>
+      </section>
+
+      <section class="status-strip" id="statusStrip" hidden></section>
+      <section class="topic-bar" id="topicBar">
+        <div class="topic-tabs" id="topicTabs"></div>
+        <input class="topic-search" id="topicSearch" type="search" placeholder="搜索标题、摘要..." autocomplete="off" />
+      </section>
+
+      <section class="hot-panel" id="hotPanel">
+        <div class="panel-head"><h2 id="hotTitle">当前热点</h2><span class="hint" id="hotHint">按站内综合评分排序 · 点击标题打开原文</span></div>
+        <ol class="hot-list" id="hotList"></ol>
+      </section>
+
+      <section class="brief-panel" id="briefPanel">
+        <div class="panel-head"><h2 id="briefTitle">AI 日报</h2><span class="hint" id="briefTime"></span></div>
+        <div class="brief-text" id="briefText"></div>
+      </section>
+      <section class="stream" id="stream">
+        <div class="empty">正在加载热点...</div>
+      </section>
+    </main>
+
+    <div class="settings-modal" id="settingsModal" hidden>
+      <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="settings-head">
+          <h2 id="settingsTitle">连接设置</h2>
+          <button class="settings-close" id="settingsClose" type="button" aria-label="关闭">✕</button>
+        </div>
+
+        <div class="settings-body">
+          <fieldset class="settings-group">
+            <legend>品牌与外观</legend>
+            <label>网页名称
+              <input id="setSiteTitle" type="text" spellcheck="false" autocomplete="off" placeholder="留空使用默认名称" />
+            </label>
+            <label>名称下方小字
+              <input id="setSiteSubtitle" type="text" spellcheck="false" autocomplete="off" placeholder="留空使用默认说明" />
+            </label>
+            <label>LOGO 图标
+              <input id="setSiteLogo" type="file" accept="image/png,image/jpeg,image/webp" />
+            </label>
+            <div class="brand-logo-row">
+              <img id="logoPreview" class="brand-logo-preview" alt="LOGO 预览" hidden />
+              <button class="settings-test" id="logoClear" type="button">清除 LOGO</button>
+              <span class="settings-result" id="logoResult"></span>
+            </div>
+            <input id="setSiteLogoData" type="hidden" />
+            <div class="settings-hint">建议 LOGO 为正方形 PNG/JPG/WebP，尺寸 64×64 px（最大 2MB）；上传后会自动缩放到 64×64 并保存在本机浏览器。留空则不显示图标。</div>
+          </fieldset>
+
+          <fieldset class="settings-group">
+            <legend>信源状态</legend>
+            <section class="sources-panel" id="sourcesPanel"></section>
+          </fieldset>
+
+          <fieldset class="settings-group">
+            <legend>自定义 RSS 信源</legend>
+            <label>每行一个 RSS 地址，可用「名称|地址」指定显示名称
+              <textarea id="customSources" rows="4" spellcheck="false" placeholder="量子位|https://example.com/feed"></textarea>
+            </label>
+            <div class="settings-hint">保存并关闭后，点「刷新热点」生效。无效地址只影响该条信源。</div>
+            <div class="feed-picks">
+              <div class="feed-picks-title">常用公众号（点按填入 · 来自 Wechat2RSS 公开 feed）</div>
+              <div class="feed-picks-list">
+            <button class="feed-chip" data-name="量子位" data-feed="https://wechat2rss.xlab.app/feed/7131b577c61365cb47e81000738c10d872685908.xml" type="button">量子位</button>
+            <button class="feed-chip" data-name="新智元" data-feed="https://wechat2rss.xlab.app/feed/ede30346413ea70dbef5d485ea5cbb95cca446e7.xml" type="button">新智元</button>
+            <button class="feed-chip" data-name="机器之心" data-feed="https://wechat2rss.xlab.app/feed/51e92aad2728acdd1fda7314be32b16639353001.xml" type="button">机器之心</button>
+            <button class="feed-chip" data-name="夕小瑶科技说" data-feed="https://wechat2rss.xlab.app/feed/a1cd365aa14ed7d64cabfc8aa086da40ecaba34d.xml" type="button">夕小瑶科技说</button>
+            <button class="feed-chip" data-name="PaperWeekly" data-feed="https://wechat2rss.xlab.app/feed/3be891c2f4e526629ab055a297cc2cd6c1f0a563.xml" type="button">PaperWeekly</button>
+            <button class="feed-chip" data-name="机器学习初学者" data-feed="https://wechat2rss.xlab.app/feed/c5f385197ef56f9345db0daf1e46419af8c7d664.xml" type="button">机器学习初学者</button>
+            <button class="feed-chip" data-name="我爱计算机视觉" data-feed="https://wechat2rss.xlab.app/feed/b81ffcfff1107b5265cd7e39de610dc7ca72caf4.xml" type="button">我爱计算机视觉</button>
+            <button class="feed-chip" data-name="Datawhale" data-feed="https://wechat2rss.xlab.app/feed/4d620d988cb21cfeefd2263207221f0dc70df9ff.xml" type="button">Datawhale</button>
+            <button class="feed-chip" data-name="集智俱乐部" data-feed="https://wechat2rss.xlab.app/feed/8540570d27c0bfe0a219173cf1ace83ae79445cb.xml" type="button">集智俱乐部</button>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="settings-group">
+            <legend>公众号订阅</legend>
+            <label>每行一个公众号名称
+              <textarea id="wechatAccounts" rows="4" spellcheck="false" placeholder="量子位"></textarea>
+            </label>
+            <div class="settings-hint">搜狗通道在当前云端网络受限，公众号文章建议改用上方「自定义 RSS 信源」里的 Wechat2RSS 公开 feed，稳定且实时。完整目录：https://wechat2rss.xlab.app/list/all.html</div>
+          </fieldset>
+
+          <p class="settings-note">
+            配置仅保存在本机浏览器（localStorage），不会上传到任何服务器。模板中的 <code>{url}</code>
+            会被替换为实际目标地址；留空则使用内置默认值。修改后需重新点击「刷新热点」生效。
+          </p>
+
+          <fieldset class="settings-group">
+            <legend>阅读代理（正文抓取）</legend>
+            <label>代理模板
+              <input id="setProxyTemplate" type="text" spellcheck="false" autocomplete="off"
+                     placeholder="https://r.jina.ai/http://{url}" />
+            </label>
+            <label>访问凭证（可选）
+              <input id="setProxyKey" type="password" spellcheck="false" autocomplete="off"
+                     placeholder="留空表示匿名访问" />
+            </label>
+            <div class="settings-actions">
+              <button class="settings-test" data-test="proxy" type="button">测试连通</button>
+              <span class="settings-result" id="resultProxy"></span>
+            </div>
+            <div class="settings-hint">用于抓取 OpenAI、Anthropic、虎嗅等站点正文。默认值为 Jina 公共阅读器，配额有限，填写凭证可提升额度。</div>
+          </fieldset>
+
+          <fieldset class="settings-group">
+            <legend>RSS 转 JSON</legend>
+            <label>接口模板
+              <input id="setRssTemplate" type="text" spellcheck="false" autocomplete="off"
+                     placeholder="https://api.rss2json.com/v1/api.json?rss_url={url}" />
+            </label>
+            <label>API Key（可选）
+              <input id="setRssKey" type="password" spellcheck="false" autocomplete="off"
+                     placeholder="rss2json 的 api_key，留空为匿名" />
+            </label>
+            <div class="settings-actions">
+              <button class="settings-test" data-test="rss" type="button">测试连通</button>
+              <span class="settings-result" id="resultRss"></span>
+            </div>
+          </fieldset>
+
+          <fieldset class="settings-group">
+            <legend>搜索代理（公众号与站点检索）</legend>
+            <label>代理模板
+              <input id="setSearchTemplate" type="text" spellcheck="false" autocomplete="off"
+                     placeholder="https://r.jina.ai/http://{url}" />
+            </label>
+            <div class="settings-actions">
+              <button class="settings-test" data-test="search" type="button">测试连通</button>
+              <span class="settings-result" id="resultSearch"></span>
+            </div>
+          </fieldset>
+
+          <fieldset class="settings-group">
+            <legend>AI 接口（OpenAI 兼容）</legend>
+            <label class="settings-switch">
+              <input id="setAiEnabled" type="checkbox" />
+              <span>启用 AI 增强</span>
+            </label>
+            <label>Base URL
+              <input id="setAiBase" type="text" spellcheck="false" autocomplete="off"
+                     placeholder="https://api.deepseek.com/v1" />
+            </label>
+            <label>API Key
+              <input id="setAiKey" type="password" spellcheck="false" autocomplete="off"
+                     placeholder="sk-..." />
+            </label>
+            <label>模型
+              <input id="setAiModel" type="text" spellcheck="false" autocomplete="off"
+                     placeholder="deepseek-chat" />
+            </label>
+            <div class="settings-actions">
+              <button class="settings-test" data-test="ai" type="button">测试凭证</button>
+              <span class="settings-result" id="resultAi"></span>
+            </div>
+            <div class="settings-hint">开启后，每次「刷新热点」会调用一次 chat/completions，让模型筛掉非科技内容、重新评分、给出入选理由并生成今日速览。调用会产生费用；关闭或失败时自动回退到规则评分，不影响资讯显示。</div>
+          </fieldset>
+        </div>
+
+        <div class="settings-foot">
+          <button class="settings-btn" id="settingsReset" type="button">恢复默认</button>
+          <button class="settings-btn primary" id="settingsSave" type="button">保存并关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-modal" id="mobileModal" hidden>
+      <div class="settings-panel mobile-panel" role="dialog" aria-modal="true" aria-labelledby="mobileTitle">
+        <div class="settings-head">
+          <h2 id="mobileTitle">手机查看</h2>
+          <button class="settings-close" id="mobileClose" type="button" aria-label="关闭">✕</button>
+        </div>
+        <div class="settings-body mobile-body">
+          <p class="settings-note" id="mobileNote">手机与电脑连接同一 WiFi，用相机扫码即可打开实时热点页。两端共用同一份资讯，刷新后都是最新内容。</p>
+          <div class="qr-box">
+            <img id="mobileQr" alt="访问二维码" />
+            <div id="mobileQrFallback" class="settings-hint" hidden>二维码暂不可用，请手动输入下方地址</div>
+          </div>
+          <div id="mobileUrls" class="mobile-urls"></div>
+          <div class="settings-actions">
+            <button class="settings-btn" id="mobileCopy" type="button">复制地址</button>
+            <span class="settings-result" id="mobileCopyResult"></span>
+          </div>
+          <div class="settings-hint" id="mobileHint">若扫码后打不开，请确认：电脑上的中转服务仍在运行、手机与电脑处于同一 WiFi、电脑防火墙未拦截 8787 端口。</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const FEEDS = [
+        // ── 以下为可直连的 RSS 源（经本地中转解析），是当前的主力数据通道 ──
+        { name: "量子位", kind: "media", url: "https://www.qbitai.com/feed", home: "https://www.qbitai.com/", weight: 86 },
+        { name: "36氪 快讯", kind: "media", url: "https://rsshub.rssforever.com/36kr/newsflashes", home: "https://36kr.com/", weight: 82 },
+        { name: "极客公园", kind: "media", url: "https://www.geekpark.net/rss", home: "https://www.geekpark.net/", weight: 80 },
+        { name: "爱范儿", kind: "media", url: "https://www.ifanr.com/feed", home: "https://www.ifanr.com/", weight: 78 },
+        { name: "奇客 Solidot", kind: "media", url: "https://www.solidot.org/index.rss", home: "https://www.solidot.org/", weight: 76 },
+        { name: "少数派", kind: "media", url: "https://sspai.com/feed", home: "https://sspai.com/", weight: 74 },
+        // ── 官方 / 门户源：OpenAI 走官方 RSS，Anthropic 与虎嗅由本地中转解析官方页面 ──
+        { name: "OpenAI", kind: "official", group: "official", url: "https://openai.com/news/rss.xml", home: "https://openai.com/news/", weight: 94 },
+        { name: "Anthropic", kind: "official", group: "official", url: "https://www.anthropic.com/news", home: "https://www.anthropic.com/news", weight: 92 },
+        { name: "虎嗅网", kind: "media", group: "official", url: "https://www.huxiu.com/", home: "https://www.huxiu.com/", weight: 78 },
+        // ── 以下信源依赖 Jina 阅读代理（r.jina.ai）或已失效的源站。
+        //    当前网络下 r.jina.ai 连接超时、tisi.org 返回 503，启用后会让每次刷新
+        //    空等十余秒并全部失败，故暂时停用。代理恢复后取消注释即可重新接入。
+        // { name: "OpenAI", kind: "official", type: "page", home: "https://openai.com/news/", weight: 94 },
+        // { name: "Anthropic", kind: "official", type: "page", home: "https://www.anthropic.com/news", weight: 92 },
+        // { name: "MIT Technology Review AI", kind: "media", type: "page", home: "https://www.technologyreview.com/topic/artificial-intelligence/", weight: 78 },
+        // { name: "腾讯研究院 AI&Society", kind: "research", url: "https://tisi.org/ais/feed/", home: "https://tisi.org/ais/", weight: 82 },
+        // { name: "财联社 AI", kind: "media", type: "page", home: "https://api3.cls.cn/share/subject/1321?os=web&sv=859", weight: 80 },
+        // { name: "虎嗅网", kind: "media", type: "page", home: "https://www.huxiu.com/", weight: 72 },
+        // { name: "36氪", kind: "media", type: "page", home: "https://36kr.com/", weight: 74 },
+        // { name: "AI寒武纪", kind: "wechat", type: "page", parser: "sogouwechat", home: "https://www.sogou.com/web?query=AI%E5%AF%92%E6%AD%A6%E7%BA%AA", authorName: "AI寒武纪", authorAliases: ["AI寒武纪"], weight: 76, freewechatBizId: "Mzg3MTkxMjYzOA==" },
+        // { name: "卡尔的AI沃茨", kind: "wechat", type: "page", parser: "sogouwechat", home: "https://weixin.sogou.com/weixin?type=2&ie=utf8&query=%E5%8D%A1%E5%B0%94%E7%9A%84AI%E6%B2%83%E8%8C%A8", authorName: "卡尔的AI沃茨", authorAliases: ["卡尔的AI沃茨", "AI沃茨", "卡尔的沃茨"], weight: 74 },
+        // { name: "袋鼠帝AI客栈", kind: "wechat", type: "page", parser: "jintiankansha", home: "http://www.jintiankansha.me/column/bItV5MCgTA", columnId: "bItV5MCgTA", authorName: "袋鼠帝AI客栈", authorAliases: ["袋鼠帝AI客栈", "袋鼠帝"], weight: 74, freewechatBizId: "MjM5NDI4MTY3NA==" },
+        // { name: "AI李子", kind: "wechat", type: "page", parser: "sogouwechat", home: "https://weixin.sogou.com/weixin?type=2&ie=utf8&query=AI%E6%9D%8E%E5%AD%90", authorName: "AI李子", authorAliases: ["AI李子", "李子AI", "李子"], weight: 72 }
+      ];
+      const TRANSLATION_API = "https://api.mymemory.translated.net/get";
+      const ORIGINAL_URL_CACHE_KEY = "hotspotOnlineOriginalUrlCacheV3";
+      const TEMP_WECHAT_LINK_TTL_MS = 10 * 60 * 1000;
+
+      const copy = {
+        zh: {
+          title: "AI 热点在线版",
+          subtitle: "上传到静态网页空间后，手机也能点刷新抓最新热点",
+          liveClock: "当前时间",
+          lastUpdated: "上次刷新",
+          count: "候选热点",
+          sources: "数据源",
+          updated: "热点时间",
+          mode: "刷新模式",
+          todayWindow: "当天实时",
+          latestWindow: "最新优先",
+          onlineMode: "在线抓取",
+          aiBriefLabel: "今日 AI 速览",
+          aiScore: "AI 评分",
+          aiAnalyzing: "AI 正在筛选资讯并重新评分...",
+          aiFailed: "AI 增强未生效（已回退规则评分）：",
+          aiModeOn: "AI 精选",
+          refresh: "刷新热点",
+          refreshing: "刷新中...",
+          onlyNew: "只看新增",
+          officialOnly: "官方资讯",
+          mobileView: "📱 手机查看",
+          emptyOfficial: "暂无官方资讯，请点击「刷新热点」获取最新内容。",
+          newTag: "新增",
+          newHeadline: "本次新增",
+          noNewItems: "本次刷新没有新增热点。",
+          empty: "暂无热点",
+          emptyNewOnly: "当前没有新增热点。",
+          source: "来源",
+          published: "发布",
+          score: "总分",
+          dry: "干货",
+          fresh: "新鲜",
+          rel: "相关",
+          loading: "正在从公开热点源抓取...",
+          translating: "正在补全中英文标题与摘要...",
+          error: "部分数据源暂时不可用，已展示成功抓到的内容。",
+          relayOffline: "中转服务未运行：本机请双击「启动热点服务.command」并从 http://127.0.0.1:8787/ 打开；公网访问请在电脑运行「启动公网访问.command」，并使用它每次打印的新地址。不要直接双击 HTML 文件。",
+          sourceState: "源状态",
+          sourceOk: "正常",
+          sourceError: "失败",
+          sourceFetching: "抓取中",
+          sourceToday: "当天",
+          sourceLatest: "最新",
+          unknownTime: "时间待确认",
+          sourceItems: (count) => `${count} 条`,
+          newItemsText: (count, titles) => `本次新增 ${count} 条：${titles}`
+        },
+        en: {
+          title: "AI Hotspot Online",
+          subtitle: "Upload this file to static hosting; mobile refresh fetches live hotspots",
+          liveClock: "Local time",
+          lastUpdated: "Last refresh",
+          count: "Candidates",
+          sources: "Sources",
+          updated: "Hotspot time",
+          mode: "Refresh mode",
+          todayWindow: "Today only",
+          latestWindow: "Newest first",
+          onlineMode: "Live fetch",
+          aiBriefLabel: "AI DAILY BRIEF",
+          aiScore: "AI score",
+          aiAnalyzing: "AI is filtering and re-scoring items...",
+          aiFailed: "AI enhancement unavailable (fallback to rule scores):",
+          aiModeOn: "AI picks",
+          refresh: "Refresh",
+          refreshing: "Refreshing...",
+          onlyNew: "New only",
+          officialOnly: "Official",
+          mobileView: "📱 Mobile",
+          emptyOfficial: "No official updates yet. Tap refresh to fetch the latest.",
+          newTag: "NEW",
+          newHeadline: "New in this refresh",
+          noNewItems: "No new hotspots in this refresh.",
+          empty: "No hotspots available.",
+          emptyNewOnly: "No new hotspots right now.",
+          source: "Source",
+          published: "Published",
+          score: "Score",
+          dry: "Signal",
+          fresh: "Fresh",
+          rel: "Relevant",
+          loading: "Fetching public AI sources...",
+          translating: "Filling bilingual titles and summaries...",
+          error: "Some sources are temporarily unavailable; showing successful results.",
+          relayOffline: "Relay offline: run the local launcher and open http://127.0.0.1:8787/ , or run the public launcher on the computer and use the new address it prints. Do not open the HTML file directly.",
+          sourceState: "Source status",
+          sourceOk: "OK",
+          sourceError: "Error",
+          sourceFetching: "Fetching",
+          sourceToday: "Today",
+          sourceLatest: "Latest",
+          unknownTime: "Time pending",
+          sourceItems: (count) => `${count} items`,
+          newItemsText: (count, titles) => `${count} new items: ${titles}`
+        }
+      };
+
+      const AI_KEYWORDS = ["ai", "artificial intelligence", "agent", "agents", "llm", "large language model", "multimodal", "reasoning", "benchmark", "model", "openai", "anthropic", "claude", "gemini", "deepmind", "deepseek", "qwen", "mistral", "llama", "hugging face", "rag", "vector", "robotics", "人工智能", "大模型", "智能体", "算力", "机器人", "aigc", "生成式", "机器学习", "深度学习", "多模态", "腾讯研究院", "财联社", "虎嗅", "36氪", "AI寒武纪", "卡尔的AI沃茨", "袋鼠帝AI客栈", "AI李子"];
+      const SIGNAL_KEYWORDS = ["release", "launch", "announces", "introduced", "benchmark", "evaluation", "paper", "research", "dataset", "open source", "api", "sdk", "guide", "tutorial", "report", "analysis", "framework", "architecture", "pricing", "safety", "security", "performance", "case study", "introducing", "new", "latest", "today", "发布", "上线", "开源", "研究", "报告", "分析", "评测", "融资", "模型", "Agent", "智能体", "芯片", "算力", "产品", "更新"];
+
+      const state = {
+        lang: localStorage.getItem("hotspotOnlineLang") || "zh",
+        theme: localStorage.getItem("hotspotOnlineTheme") === "dark" ? "dark" : "light",
+        onlyNew: localStorage.getItem("hotspotOnlineOnlyNew") === "1",
+        officialOnly: localStorage.getItem("hotspotOnlineOfficialOnly") === "1",
+        selectedDate: "",
+        dateOpen: {},
+        items: [],
+        previousIds: JSON.parse(localStorage.getItem("hotspotOnlinePreviousIds") || "[]"),
+        originalUrlCache: JSON.parse(localStorage.getItem(ORIGINAL_URL_CACHE_KEY) || "{}"),
+        lastUpdatedAt: localStorage.getItem("hotspotOnlineLastUpdatedAt") || null,
+        errors: [],
+        feedStatuses: FEEDS.map((feed) => ({
+          name: feed.name,
+          home: feed.home,
+          ok: null,
+          totalCount: 0,
+          todayCount: 0,
+          latestPublished: null,
+          error: ""
+        })),
+        loading: false,
+        translating: false,
+        translationCache: JSON.parse(localStorage.getItem("hotspotOnlineTranslationCache") || "{}"),
+        aiBrief: "",
+        aiError: "",
+        aiLoading: false,
+        aiActive: false,
+        officialPool: [],
+        topic: "all",
+        query: "",
+        activeView: "all",
+        favorites: JSON.parse(localStorage.getItem("hotspotOnlineFavorites") || "{}"),
+        favOnly: false
+      };
+
+      const stream = document.querySelector("#stream");
+      const liveClock = document.querySelector("#liveClock");
+      const lastUpdated = document.querySelector("#lastUpdated");
+      const newStrip = document.querySelector("#newStrip");
+      const newLabel = document.querySelector("#newLabel");
+      const newText = document.querySelector("#newText");
+      const toggleNew = document.querySelector("#toggleNew");
+      const refreshButton = document.querySelector("#refresh");
+      const statusStrip = document.querySelector("#statusStrip");
+      const sourcesPanel = document.querySelector("#sourcesPanel");
+
+      // ---------------- 连接设置（代理与凭证） ----------------
+      const SETTINGS_KEY = "hotspotOnlineSettings";
+
+      const DEFAULT_SETTINGS = {
+        proxyTemplate: "https://r.jina.ai/http://{url}",
+        proxyKey: "",
+        rssTemplate: "/api/rss?url={url}",
+        rssKey: "",
+        searchTemplate: "https://r.jina.ai/http://{url}",
+        aiBase: "",
+        aiKey: "",
+        aiModel: "",
+        aiEnabled: false,
+        customSources: "",
+        wechatAccounts: "",
+        siteTitle: "",
+        siteSubtitle: "",
+        siteLogo: ""
+      };
+
+      function loadSettings() {
+        try {
+          const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+          const next = { ...DEFAULT_SETTINGS, ...raw };
+          // 旧配置把本机绝对地址写死，手机上会指向设备自身（127.0.0.1），统一迁移为同源相对路径
+          Object.keys(next).forEach((key) => {
+            if (key.endsWith("Template") && /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(String(next[key]))) {
+              next[key] = DEFAULT_SETTINGS[key];
+            }
+          });
+          return next;
+        } catch (error) {
+          console.warn("Could not read settings", error);
+          return { ...DEFAULT_SETTINGS };
+        }
+      }
+
+      function persistSettings(next) {
+        try {
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+          return true;
+        } catch (error) {
+          console.warn("Could not persist settings", error);
+          return false;
+        }
+      }
+
+      let settings = loadSettings();
+
+      function applyTemplate(template, vars) {
+        const text = String(template || "").trim();
+        if (!text) return "";
+        return text.replace(/\{(\w+)\}/g, (match, key) =>
+          Object.prototype.hasOwnProperty.call(vars, key) ? vars[key] : match
+        );
+      }
+
+      function proxyHeaders(url, key = settings.proxyKey) {
+        const target = String(url || "");
+        if (key && target.startsWith("https://r.jina.ai")) {
+          return { Authorization: `Bearer ${key}` };
+        }
+        return {};
+      }
+
+      // 统一出口：所有外部抓取都经此包装，便于统一附加凭证与超时控制
+      async function apiFetch(url, options = {}) {
+        const { timeout = 15000, ...rest } = options;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeout);
+        try {
+          return await fetch(url, {
+            cache: "no-store",
+            ...rest,
+            signal: controller.signal,
+            headers: { ...proxyHeaders(url), ...(rest.headers || {}) }
+          });
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+
+      document.querySelectorAll(".feed-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          const input = document.querySelector("#customSources");
+          const current = linesOf(input.value);
+          const name = chip.dataset.name || chip.textContent.trim();
+          const url = chip.dataset.feed;
+          const entry = `${name}|${url}`;
+          const exists = current.some((line) => line === entry || line === url || line.endsWith(`|${url}`));
+          if (exists) return;
+          current.push(entry);
+          input.value = current.join("\n");
+          chip.classList.add("selected");
+        });
+      });
+
+      document.querySelector("#setSiteLogo").addEventListener("change", async (event) => {
+        const file = event.target.files && event.target.files[0];
+        const result = document.querySelector("#logoResult");
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+          result.textContent = "图片请小于 2MB";
+          return;
+        }
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          const image = await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = dataUrl;
+          });
+          const canvas = document.createElement("canvas");
+          canvas.width = 64;
+          canvas.height = 64;
+          canvas.getContext("2d").drawImage(image, 0, 0, 64, 64);
+          const optimized = canvas.toDataURL("image/png");
+          document.querySelector("#setSiteLogoData").value = optimized;
+          const preview = document.querySelector("#logoPreview");
+          preview.src = optimized;
+          preview.hidden = false;
+          result.textContent = "已缩放到 64×64";
+        } catch (error) {
+          result.textContent = "读取图片失败";
+        }
+      });
+
+      document.querySelector("#logoClear").addEventListener("click", () => {
+        document.querySelector("#setSiteLogoData").value = "";
+        document.querySelector("#setSiteLogo").value = "";
+        const preview = document.querySelector("#logoPreview");
+        preview.hidden = true;
+        preview.removeAttribute("src");
+        document.querySelector("#logoResult").textContent = "";
+      });
+
+      const settingsModal = document.querySelector("#settingsModal");
+      const settingsInputs = {
+        proxyTemplate: document.querySelector("#setProxyTemplate"),
+        proxyKey: document.querySelector("#setProxyKey"),
+        rssTemplate: document.querySelector("#setRssTemplate"),
+        rssKey: document.querySelector("#setRssKey"),
+        searchTemplate: document.querySelector("#setSearchTemplate"),
+        aiBase: document.querySelector("#setAiBase"),
+        aiKey: document.querySelector("#setAiKey"),
+        aiModel: document.querySelector("#setAiModel"),
+        aiEnabled: document.querySelector("#setAiEnabled"),
+        customSources: document.querySelector("#customSources"),
+        wechatAccounts: document.querySelector("#wechatAccounts"),
+        siteTitle: document.querySelector("#setSiteTitle"),
+        siteSubtitle: document.querySelector("#setSiteSubtitle"),
+        siteLogo: document.querySelector("#setSiteLogoData")
+      };
+
+      const RESULT_NODES = {
+        proxy: "#resultProxy",
+        rss: "#resultRss",
+        search: "#resultSearch",
+        ai: "#resultAi"
+      };
+
+      function fillSettingsForm(source) {
+        Object.entries(settingsInputs).forEach(([key, input]) => {
+          if (input.type === "checkbox") input.checked = !!source[key];
+          else input.value = source[key] || "";
+        });
+        const preview = document.querySelector("#logoPreview");
+        if (source.siteLogo) {
+          preview.src = source.siteLogo;
+          preview.hidden = false;
+        } else {
+          preview.hidden = true;
+          preview.removeAttribute("src");
+        }
+      }
+
+      function readSettingsForm() {
+        const next = {};
+        Object.entries(settingsInputs).forEach(([key, input]) => {
+          next[key] = input.type === "checkbox" ? !!input.checked : input.value.trim();
+        });
+        return { ...DEFAULT_SETTINGS, ...next };
+      }
+
+      function setResult(kind, state, text) {
+        const node = document.querySelector(RESULT_NODES[kind]);
+        if (!node) return;
+        node.className = `settings-result ${state}`.trim();
+        node.textContent = text;
+      }
+
+      function openSettings() {
+        fillSettingsForm(settings);
+        Object.keys(RESULT_NODES).forEach((kind) => setResult(kind, "", ""));
+        settingsModal.hidden = false;
+        settingsInputs.proxyTemplate.focus();
+      }
+
+      function closeSettings() {
+        settingsModal.hidden = true;
+      }
+
+      function networkHint(message) {
+        return /Failed to fetch|NetworkError|Load failed|Network request failed/i.test(message)
+          ? "（跨域或网络被拦截；以 file:// 直接打开时常见，部署到网页空间后再测）"
+          : "";
+      }
+
+      async function testConnection(kind, button) {
+        const draft = readSettingsForm();
+        button.disabled = true;
+        setResult(kind, "", "测试中...");
+
+        try {
+          if (kind === "ai") {
+            if (!draft.aiBase || !draft.aiKey) throw new Error("请先填写 Base URL 与 API Key");
+            const response = await apiFetch(aiEndpoint("/api/ai/models"), {
+              method: "POST",
+              timeout: 25000,
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ baseUrl: draft.aiBase, apiKey: draft.aiKey })
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || payload.error) {
+              throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+            }
+            const list = Array.isArray(payload?.data) ? payload.data : [];
+            const model = draft.aiModel || list[0]?.id || "";
+            setResult(kind, "ok", `凭证有效${list.length ? ` · 可选 ${list.length} 个模型` : ""}${model ? ` · ${model}` : ""}`);
+            return;
+          }
+
+          let url = "";
+          if (kind === "proxy") {
+            url = applyTemplate(draft.proxyTemplate || DEFAULT_SETTINGS.proxyTemplate, { url: "example.com" });
+          } else if (kind === "rss") {
+            const feed = FEEDS.find((item) => item.url) || FEEDS[0];
+            const target = feed.url || feed.home;
+            url = applyTemplate(draft.rssTemplate || DEFAULT_SETTINGS.rssTemplate, {
+              url: encodeURIComponent(target)
+            });
+            if (draft.rssKey) {
+              url += `${url.includes("?") ? "&" : "?"}api_key=${encodeURIComponent(draft.rssKey)}`;
+            }
+          } else {
+            url = applyTemplate(draft.searchTemplate || DEFAULT_SETTINGS.searchTemplate, {
+              url: "www.sogou.com/web?query=test"
+            });
+          }
+
+          if (!url) throw new Error("模板为空，请填写或恢复默认");
+
+          const response = await apiFetch(url, { headers: proxyHeaders(url, draft.proxyKey) });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const body = await response.text();
+          setResult(kind, "ok", `连通正常 · 返回 ${body.length} 字符`);
+        } catch (error) {
+          const message = String(error?.message || error);
+          setResult(kind, "fail", `失败：${message}${networkHint(message)}`);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      document.querySelector("#openSettings").addEventListener("click", openSettings);
+      document.querySelector("#settingsClose").addEventListener("click", closeSettings);
+      document.querySelector("#settingsSave").addEventListener("click", () => {
+        settings = readSettingsForm();
+        persistSettings(settings);
+        closeSettings();
+      });
+      document.querySelector("#settingsReset").addEventListener("click", () => {
+        settings = { ...DEFAULT_SETTINGS };
+        fillSettingsForm(settings);
+        persistSettings(settings);
+      });
+      settingsModal.addEventListener("click", (event) => {
+        if (event.target === settingsModal) closeSettings();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !settingsModal.hidden) closeSettings();
+      });
+      document.querySelectorAll(".settings-test").forEach((button) => {
+        button.addEventListener("click", () => testConnection(button.dataset.test, button));
+      });
+
+      // ---------------- 手机查看入口 ----------------
+      const mobileModal = document.querySelector("#mobileModal");
+      const mobileQr = document.querySelector("#mobileQr");
+      let mobilePrimaryUrl = "";
+
+      function escText(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      }
+
+      function closeMobilePanel() {
+        mobileModal.hidden = true;
+      }
+
+      function isLocalHost(host) {
+        return /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(host)
+          || /^192\.168\./.test(host)
+          || /^10\./.test(host)
+          || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+      }
+
+      async function openMobilePanel() {
+        mobileModal.hidden = false;
+        const box = document.querySelector("#mobileUrls");
+        const result = document.querySelector("#mobileCopyResult");
+        const note = document.querySelector("#mobileNote");
+        const hint = document.querySelector("#mobileHint");
+        result.textContent = "";
+        result.className = "settings-result";
+        box.innerHTML = `<div class="settings-note">正在获取访问地址...</div>`;
+        mobileQr.hidden = true;
+        mobileQr.removeAttribute("src");
+        document.querySelector("#mobileQrFallback").hidden = true;
+
+        const location = window.location || {};
+        const publicHost = /^https?:$/.test(String(location.protocol || ""))
+          && !isLocalHost(String(location.hostname || ""));
+        let urls = [];
+
+        if (publicHost) {
+          // 已部署到公网：保留 location.search（平台分享链接的 sharecode），否则手机扫码会 403
+          urls = [`${location.origin}${location.pathname}${location.search || ""}`];
+          note.textContent = "该页面已发布到公网，手机用 WiFi 或移动网络扫码均可打开，随时查看实时资讯。";
+          hint.textContent = "链接是公开地址，任何拿到链接的人都可以访问；请勿在设置中填写不希望共享的凭证。";
+        } else {
+          note.textContent = "手机与电脑连接同一 WiFi，用相机扫码即可打开实时热点页。两端共用同一份资讯，刷新后都是最新内容。";
+          hint.textContent = "若扫码后打不开，请确认：中转服务仍在运行、手机与电脑处于同一 WiFi、防火墙未拦截 8787 端口。";
+          try {
+            const response = await fetch("/api/lan", { cache: "no-store" });
+            const data = await response.json();
+            urls = Array.isArray(data.urls) ? data.urls : [];
+            if (!urls.length) {
+              box.innerHTML = `<div class="settings-note">未检测到局域网地址。请确认电脑已连接 WiFi，或在手机输入 <code>http://电脑IP:${escText(data.port || 8787)}/ai-hotspots-online.html</code>。</div>`;
+              return;
+            }
+          } catch (error) {
+            box.innerHTML = `<div class="settings-note">无法获取局域网地址：${escText(error.message)}。请确认中转服务仍在运行。</div>`;
+            return;
+          }
+        }
+
+        mobilePrimaryUrl = urls[0];
+        box.innerHTML = urls.map((url) => `<div class="mobile-url">${escText(url)}</div>`).join("");
+        mobileQr.onload = () => { mobileQr.hidden = false; };
+        mobileQr.onerror = () => {
+          mobileQr.hidden = true;
+          document.querySelector("#mobileQrFallback").hidden = false;
+        };
+        mobileQr.src = "/api/qr?text=" + encodeURIComponent(mobilePrimaryUrl);
+      }
+
+      document.querySelector("#openMobile").addEventListener("click", openMobilePanel);
+      document.querySelector("#mobileClose").addEventListener("click", closeMobilePanel);
+      mobileModal.addEventListener("click", (event) => {
+        if (event.target === mobileModal) closeMobilePanel();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !mobileModal.hidden) closeMobilePanel();
+      });
+      document.querySelector("#mobileCopy").addEventListener("click", async () => {
+        const result = document.querySelector("#mobileCopyResult");
+        if (!mobilePrimaryUrl) {
+          result.textContent = "暂无可复制的地址";
+          return;
+        }
+        try {
+          if (typeof navigator === "undefined" || !navigator.clipboard) throw new Error("clipboard unavailable");
+          await navigator.clipboard.writeText(mobilePrimaryUrl);
+          result.className = "settings-result ok";
+          result.textContent = "已复制，可粘贴到手机浏览器";
+        } catch (error) {
+          result.className = "settings-result fail";
+          result.textContent = "自动复制不可用，请长按上方地址手动复制";
+        }
+      });
+
+      // ---------------- AI 增强 ----------------
+      const AI_TIMEOUT_MS = 90000;
+      const AI_MAX_ITEMS = 30;
+
+      function aiText(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function aiReady() {
+        return !!(settings.aiEnabled && settings.aiBase && settings.aiKey && settings.aiModel);
+      }
+
+      function aiEndpoint(path = "/api/ai") {
+        // 页面与所有接口同源，用相对路径，手机 / 局域网访问时自动指向正确主机
+        return path;
+      }
+
+      function buildAiMessages(items) {
+        const dateStr = new Date().toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" });
+        const compact = items.map((item) => ({
+          id: item.id,
+          title: String(item.title || "").slice(0, 80),
+          summary: String(item.summary || "").slice(0, 110),
+          source: item.source_name || ""
+        }));
+
+        const system = `你是资深科技资讯主编。今天是 ${dateStr}。你会收到一批中文科技媒体的候选资讯（JSON 数组）。
+
+任务：
+1. 剔除与 AI、软件、芯片、机器人、云计算、开发者工具、互联网科技明显无关的内容（如纯股市行情、消费促销、娱乐八卦、体育新闻）。
+2. 对保留条目按「AI/科技相关度 40% + 事件影响力 35% + 信息新颖度 25%」打分，score 为 0-100 整数，要有区分度，不要都给 80 分左右。
+3. 每条写一句不超过 24 字的中文入选理由，说明为什么值得关注。
+4. 写一段不超过 90 字的中文「今日速览」，概括这批资讯里最重要的 2-3 个趋势。
+
+严格只返回一个 JSON 对象，不要 markdown 代码块，不要任何解释文字：
+{
+  "brief": "今日速览文字",
+  "items": [
+    { "id": "原样返回传入的 id", "keep": true, "score": 88, "reason": "入选理由", "tags": ["大模型"] }
+  ]
+}
+
+items 必须为输入的每一条都给出结果，id 与输入完全一致。keep 为 false 时 score 可给 0。至少保留一半条目，除非确实大量无关。`;
+
+        return [
+          { role: "system", content: system },
+          { role: "user", content: JSON.stringify(compact) }
+        ];
+      }
+
+      function extractJsonObject(text) {
+        const cleaned = String(text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
+        const start = cleaned.indexOf("{");
+        if (start === -1) return null;
+
+        let depth = 0;
+        let inStr = false;
+        let esc = false;
+        for (let i = start; i < cleaned.length; i++) {
+          const c = cleaned[i];
+          if (inStr) {
+            if (esc) esc = false;
+            else if (c === "\\") esc = true;
+            else if (c === '"') inStr = false;
+            continue;
+          }
+          if (c === '"') inStr = true;
+          else if (c === "{") depth += 1;
+          else if (c === "}") {
+            depth -= 1;
+            if (depth === 0) {
+              try {
+                return JSON.parse(cleaned.slice(start, i + 1));
+              } catch (error) {
+                return null;
+              }
+            }
+          }
+        }
+        return null;
+      }
+
+      async function aiAnalyze(items) {
+        const response = await apiFetch(aiEndpoint(), {
+          method: "POST",
+          timeout: AI_TIMEOUT_MS,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            baseUrl: settings.aiBase,
+            apiKey: settings.aiKey,
+            model: settings.aiModel,
+            messages: buildAiMessages(items),
+            maxTokens: 2400,
+            jsonMode: true
+          })
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.error) {
+          throw new Error(data?.error?.message || `AI 接口返回 ${response.status}`);
+        }
+        const content = data?.choices?.[0]?.message?.content;
+        if (!content) throw new Error("AI 未返回内容");
+
+        const parsed = extractJsonObject(content);
+        if (!parsed || !Array.isArray(parsed.items)) throw new Error("AI 返回格式无法解析");
+        return parsed;
+      }
+
+      function applyAiResult(items, result) {
+        const map = new Map();
+        result.items.forEach((entry) => {
+          if (entry && typeof entry.id === "string") map.set(entry.id, entry);
+        });
+
+        const kept = [];
+        items.forEach((item) => {
+          const ai = map.get(item.id);
+          if (!ai || ai.keep === false) {
+            // 模型漏给或明确剔除：漏给的保留，剔除的丢弃
+            if (!ai) kept.push(item);
+            return;
+          }
+          const score = Number(ai.score);
+          const aiScore = Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : null;
+          kept.push({
+            ...item,
+            aiScore,
+            aiReason: String(ai.reason || "").slice(0, 60),
+            aiTags: Array.isArray(ai.tags) ? ai.tags.slice(0, 3).map(String) : [],
+            scores: aiScore === null ? item.scores : { ...item.scores, total: aiScore }
+          });
+        });
+        return kept;
+      }
+
+      function compareByAiScoreDesc(a, b) {
+        const diff = (Number(b.aiScore) || 0) - (Number(a.aiScore) || 0);
+        if (diff !== 0) return diff;
+        return compareByPublishedDesc(a, b);
+      }
+
+      function t(key) {
+        return copy[state.lang][key];
+      }
+
+      function formatTime(value, withSeconds = true) {
+        if (!value) return "--";
+        return new Intl.DateTimeFormat(state.lang === "zh" ? "zh-CN" : "en", {
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: withSeconds ? "2-digit" : undefined
+        }).format(new Date(value));
+      }
+
+      function stripHtml(value) {
+        const box = document.createElement("div");
+        box.innerHTML = value || "";
+        return box.textContent.replace(/\s+/g, " ").trim();
+      }
+
+      function cleanTitle(title, feed) {
+        return (title || "").trim();
+      }
+
+      function hash(value) {
+        let output = 0;
+        for (let i = 0; i < value.length; i += 1) {
+          output = ((output << 5) - output + value.charCodeAt(i)) | 0;
+        }
+        return Math.abs(output).toString(36);
+      }
+
+      function countHits(text, keywords) {
+        const lower = text.toLowerCase();
+        return keywords.reduce((count, keyword) => count + (lower.includes(keyword) ? 1 : 0), 0);
+      }
+
+      function ageHours(published) {
+        if (!published) return null;
+        const time = new Date(published).getTime();
+        if (Number.isNaN(time)) return null;
+        return Math.max(0, (Date.now() - time) / 36e5);
+      }
+
+      function scoreFreshness(hours) {
+        if (hours === null) return 35;
+        if (hours <= 6) return 100;
+        if (hours <= 12) return 94;
+        if (hours <= 24) return 86;
+        if (hours <= 48) return 75;
+        if (hours <= 72) return 64;
+        if (hours <= 168) return 25;
+        return 10;
+      }
+
+      function bucketFor(published) {
+        const hours = ageHours(published);
+        if (hours === null) return { key: "unknown", zh: "时间待确认", en: "Pending time" };
+        const hour = new Date(published).getHours();
+        if (hour < 6) return { key: "overnight", zh: "今日凌晨", en: "Overnight" };
+        if (hour < 12) return { key: "morning", zh: "今日上午", en: "This morning" };
+        if (hour < 18) return { key: "afternoon", zh: "今日下午", en: "This afternoon" };
+        return { key: "evening", zh: "今日晚间", en: "This evening" };
+      }
+
+      function isTodayLocal(published) {
+        if (!published) return false;
+        const date = new Date(published);
+        if (Number.isNaN(date.getTime())) return false;
+        const now = new Date();
+        return date.getFullYear() === now.getFullYear()
+          && date.getMonth() === now.getMonth()
+          && date.getDate() === now.getDate();
+      }
+
+      function latestPublished(items) {
+        const times = items
+          .map((item) => item.published ? new Date(item.published).getTime() : Number.NaN)
+          .filter((time) => Number.isFinite(time));
+        if (!times.length) return null;
+        return new Date(Math.max(...times)).toISOString();
+      }
+
+      function compareByPublishedDesc(a, b) {
+        const aTime = Date.parse(a.published) || 0;
+        const bTime = Date.parse(b.published) || 0;
+        if (bTime !== aTime) return bTime - aTime;
+        return b.scores.total - a.scores.total;
+      }
+
+      function scoreItem(item, feed) {
+        const hours = ageHours(item.published);
+        const freshness = scoreFreshness(hours);
+        const text = `${item.title} ${item.summary}`;
+        let dryness = Math.min(100, 38 + countHits(text, SIGNAL_KEYWORDS) * 12 + (feed.kind === "research" ? 10 : 0));
+        const relevance = Math.min(100, 24 + countHits(text, AI_KEYWORDS) * 13);
+        let total = freshness * 0.4 + dryness * 0.3 + relevance * 0.2 + feed.weight * 0.1;
+        if (hours !== null && hours > 72) total *= 0.55;
+        return {
+          total: Math.round(total * 10) / 10,
+          freshness,
+          dryness,
+          relevance,
+          source: feed.weight,
+          age_penalty: hours !== null && hours > 72 ? 0.55 : 1
+        };
+      }
+
+      function rss2jsonUrl(feedUrl) {
+        const base = applyTemplate(settings.rssTemplate || DEFAULT_SETTINGS.rssTemplate, {
+          url: encodeURIComponent(feedUrl)
+        });
+        if (!settings.rssKey) return base;
+        return `${base}${base.includes("?") ? "&" : "?"}api_key=${encodeURIComponent(settings.rssKey)}`;
+      }
+
+      function jinaProxyUrl(url) {
+        const normalized = String(url || "").trim().replace(/^https?:\/\//i, "");
+        return applyTemplate(settings.proxyTemplate || DEFAULT_SETTINGS.proxyTemplate, { url: normalized });
+      }
+
+      function proxyFetchUrl(url) {
+        const normalized = String(url || "").trim();
+        if (!normalized) return "";
+        if (/^https?:\/\/r\.jina\.ai\/http:\/\//i.test(normalized)) return normalized;
+        return jinaProxyUrl(normalized);
+      }
+
+      function searchProxyUrl(query, source = "sogou-web") {
+        const normalized = String(query || "").trim();
+        if (!normalized) return "";
+        const encoded = encodeURIComponent(normalized);
+        const target = source === "sogou-weixin"
+          ? `weixin.sogou.com/weixin?type=2&ie=utf8&query=${encoded}`
+          : `www.sogou.com/web?query=${encoded}`;
+        return applyTemplate(settings.searchTemplate || DEFAULT_SETTINGS.searchTemplate, { url: target });
+      }
+
+      function normalizeSearchText(value) {
+        return String(value || "")
+          .toLowerCase()
+          .replace(/<!--[\s\S]*?-->/g, "")
+          .replace(/&[a-z]+;/g, "")
+          .replace(/[^a-z0-9\u4e00-\u9fff]+/g, "");
+      }
+
+      function normalizeMpWeixinUrl(url) {
+        return String(url || "").replace(/&amp;/g, "&").replace(/^http:\/\//i, "https://");
+      }
+
+      function isStableMpWeixinUrl(url) {
+        const normalized = normalizeMpWeixinUrl(url);
+        return /^https:\/\/mp\.weixin\.qq\.com\/s\?/i.test(normalized)
+          && /[?&]__biz=/i.test(normalized)
+          && /[?&]mid=\d+/i.test(normalized)
+          && /[?&]idx=\d+/i.test(normalized)
+          && /[?&]sn=/i.test(normalized);
+      }
+
+      function readOriginalUrlCache(itemId) {
+        const entry = state.originalUrlCache?.[itemId];
+        if (!entry) return "";
+        const url = typeof entry === "string" ? entry : entry.url;
+        const savedAt = typeof entry === "string" ? 0 : Number(entry.savedAt || 0);
+        if (!url) return "";
+        if (isStableMpWeixinUrl(url)) return normalizeMpWeixinUrl(url);
+        if (savedAt && Date.now() - savedAt < TEMP_WECHAT_LINK_TTL_MS) return normalizeMpWeixinUrl(url);
+        delete state.originalUrlCache[itemId];
+        persistOriginalUrlCache();
+        return "";
+      }
+
+      function readPossibleOriginalUrl(entry) {
+        if (!entry) return "";
+        if (typeof entry === "string") return normalizeMpWeixinUrl(entry);
+        if (typeof entry === "object" && entry.url) return normalizeMpWeixinUrl(entry.url);
+        return "";
+      }
+
+      function writeOriginalUrlCache(itemId, url) {
+        state.originalUrlCache[itemId] = {
+          url: normalizeMpWeixinUrl(url),
+          savedAt: Date.now()
+        };
+        persistOriginalUrlCache();
+      }
+
+      function scoreMpWeixinCandidate(text, index, title, sourceName) {
+        const windowText = normalizeSearchText(String(text || "").slice(Math.max(0, index - 700), index + 900));
+        const titleText = normalizeSearchText(title);
+        const sourceText = normalizeSearchText(sourceName);
+        let score = 0;
+        if (sourceText && windowText.includes(sourceText)) score += 24;
+        if (titleText) {
+          const head = titleText.slice(0, Math.min(18, titleText.length));
+          if (head && windowText.includes(head)) score += 48;
+          for (let i = 0; i < titleText.length; i += 8) {
+            const chunk = titleText.slice(i, i + 8);
+            if (chunk.length >= 5 && windowText.includes(chunk)) score += 8;
+          }
+        }
+        return score;
+      }
+
+      function extractMpWeixinUrl(text, title = "", sourceName = "") {
+        const source = String(text || "");
+        const candidates = [];
+        const patterns = [
+          { regex: /https?:\/\/mp\.weixin\.qq\.com\/s\?__biz=[^)\s<>"']+?&mid=\d+&idx=\d+&sn=[^)\s<>"']+/ig, stable: true },
+          { regex: /https?:\/\/mp\.weixin\.qq\.com\/s\?[^)\s<>"']+/ig, stable: false }
+        ];
+        for (const pattern of patterns) {
+          for (const match of source.matchAll(pattern.regex)) {
+            const url = normalizeMpWeixinUrl(match[0]);
+            if (!url) continue;
+            candidates.push({
+              url,
+              stable: pattern.stable || isStableMpWeixinUrl(url),
+              score: scoreMpWeixinCandidate(source, match.index || 0, title, sourceName)
+            });
+          }
+        }
+        if (!candidates.length) return "";
+        candidates.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          if (Number(b.stable) !== Number(a.stable)) return Number(b.stable) - Number(a.stable);
+          return 0;
+        });
+        return candidates[0].url;
+      }
+
+      async function resolveWeChatOriginalUrl(item) {
+        const cached = readOriginalUrlCache(item.id);
+        if (cached) return cached;
+        const direct = readPossibleOriginalUrl(item.original_url);
+        if (direct && /^https:\/\/mp\.weixin\.qq\.com\/s\?/i.test(direct)) {
+          writeOriginalUrlCache(item.id, direct);
+          return direct;
+        }
+        const preview = readPossibleOriginalUrl(item.url);
+        if (preview && /^https:\/\/mp\.weixin\.qq\.com\/s\?/i.test(preview)) {
+          writeOriginalUrlCache(item.id, preview);
+          return preview;
+        }
+
+        const title = String(item.title || "").trim();
+        const source = String(item.source_name || "").trim();
+        const pageUrls = [item.url, item.original_url]
+          .map(readPossibleOriginalUrl)
+          .filter((url) => url && !/mp\.weixin\.qq\.com/i.test(url));
+        for (const pageUrl of pageUrls) {
+          try {
+            const response = await apiFetch(jinaProxyUrl(pageUrl));
+            if (!response.ok) continue;
+            const text = await response.text();
+            const resolved = extractMpWeixinUrl(text, title, source);
+            if (resolved) {
+              writeOriginalUrlCache(item.id, resolved);
+              return resolved;
+            }
+          } catch (error) {
+            continue;
+          }
+        }
+
+        const queries = [
+          source ? `site:mp.weixin.qq.com ${source}` : "",
+          title ? `site:mp.weixin.qq.com ${title}` : "",
+          title && source ? `site:mp.weixin.qq.com ${title} ${source}` : "",
+          title && source ? `${title} ${source}` : "",
+          source && title ? `${source} ${title}` : "",
+          title,
+          title && source ? `${title} 公众号` : "",
+          source && item.source_url ? `${source} ${item.source_url}` : ""
+        ].filter(Boolean);
+
+        for (const query of queries) {
+          for (const searchSource of ["sogou-web", "sogou-weixin"]) {
+            try {
+              const response = await apiFetch(searchProxyUrl(query, searchSource));
+              if (!response.ok) continue;
+              const text = await response.text();
+              const resolved = extractMpWeixinUrl(text, title, source);
+              if (resolved) {
+                writeOriginalUrlCache(item.id, resolved);
+                return resolved;
+              }
+            } catch (error) {
+              continue;
+            }
+          }
+        }
+
+        return "";
+      }
+
+      function persistTranslationCache() {
+        try {
+          localStorage.setItem("hotspotOnlineTranslationCache", JSON.stringify(state.translationCache));
+        } catch (error) {
+          console.warn("Could not persist translation cache", error);
+        }
+      }
+
+      function persistOriginalUrlCache() {
+        try {
+          localStorage.setItem(ORIGINAL_URL_CACHE_KEY, JSON.stringify(state.originalUrlCache));
+        } catch (error) {
+          console.warn("Could not persist original url cache", error);
+        }
+      }
+
+      function translationKey(text, targetLang) {
+        return `${targetLang}:${hash(text)}`;
+      }
+
+      async function translateText(text, targetLang) {
+        const normalized = (text || "").trim();
+        if (!normalized) return normalized;
+        const key = translationKey(normalized, targetLang);
+        if (state.translationCache[key]) return state.translationCache[key];
+        const url = `${TRANSLATION_API}?q=${encodeURIComponent(normalized)}&langpair=en|${encodeURIComponent(targetLang)}`;
+        const response = await apiFetch(url);
+        if (!response.ok) throw new Error(`translate ${response.status}`);
+        const payload = await response.json();
+        const translated = payload?.responseData?.translatedText?.trim();
+        if (!translated) throw new Error("translate empty");
+        state.translationCache[key] = translated;
+        persistTranslationCache();
+        return translated;
+      }
+
+      async function enrichTranslations(items) {
+        const queue = [];
+        for (const item of items) {
+          if (item.title_zh && item.summary_zh && item.title_en && item.summary_en) continue;
+          queue.push(item);
+        }
+        if (!queue.length) return items;
+
+        state.translating = true;
+        renderStatus();
+
+        for (const item of queue) {
+          try {
+            item.title_en = item.title_en || item.title || "";
+            item.summary_en = item.summary_en || item.summary || "";
+            item.title_zh = item.title_zh && /[\u4e00-\u9fff]/.test(item.title_zh)
+              ? item.title_zh
+              : await translateText(item.title_en, "zh-CN");
+            item.summary_zh = item.summary_zh && /[\u4e00-\u9fff]/.test(item.summary_zh)
+              ? item.summary_zh
+              : await translateText(item.summary_en, "zh-CN");
+          } catch (error) {
+            item.title_zh = item.title_zh || item.title_en || item.title || "";
+            item.summary_zh = item.summary_zh || item.summary_en || item.summary || "";
+          }
+        }
+
+        state.translating = false;
+        renderStatus();
+        return items;
+      }
+
+      function linesOf(value) {
+        return String(value || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      }
+
+      function parseCustomSource(line, index) {
+        const parts = String(line).split(/\s*[|｜]\s*/);
+        const named = parts.length > 1 && parts[0].trim() && /^https?:\/\//i.test(parts[1]);
+        return {
+          name: named ? parts[0].trim() : `自定义 ${index + 1}`,
+          url: named ? parts[1].trim() : String(line).trim()
+        };
+      }
+
+      function dynamicFeeds() {
+        const custom = linesOf(settings.customSources).map((line, index) => {
+          const parsed = parseCustomSource(line, index);
+          return {
+            name: parsed.name,
+            kind: "custom",
+            url: parsed.url,
+            home: parsed.url,
+            weight: 72
+          };
+        });
+        const wechat = linesOf(settings.wechatAccounts).map((name) => ({
+          name: `公众号·${name}`,
+          kind: "wechat",
+          type: "wechat",
+          url: "/api/wechat?name=" + encodeURIComponent(name),
+          home: "https://weixin.sogou.com/weixin?type=2&query=" + encodeURIComponent(name),
+          weight: 78
+        }));
+        return [...FEEDS, ...custom, ...wechat];
+      }
+
+      async function fetchFeed(feed) {
+        if (feed.type === "page") {
+          return fetchPageFeed(feed);
+        }
+        const endpoint = feed.type === "wechat" ? feed.url : rss2jsonUrl(feed.url);
+        // Wechat2RSS 全文 feed 体积较大（约 2MB），首次解析可超过默认 15 秒
+        const timeout = feed.type === "wechat" || /wechat2rss\.xlab\.app/.test(feed.url) ? 60000 : 15000;
+        const response = await apiFetch(endpoint, { timeout });
+        if (!response.ok) {
+          const failed = await response.json().catch(() => ({}));
+          throw new Error(`${feed.name}: ${failed?.error?.message || failed?.message || response.status}`);
+        }
+        const payload = await response.json();
+        if (payload.status !== "ok") throw new Error(`${feed.name}: ${payload.message || "failed"}`);
+        return (payload.items || []).map((entry) => {
+          const title = cleanTitle(stripHtml(entry.title || ""), feed);
+          const summary = stripHtml(entry.description || entry.content || title).slice(0, 420);
+          const url = entry.link || feed.home;
+          const parsedTime = Date.parse(entry.pubDate);
+          const published = Number.isFinite(parsedTime) ? new Date(parsedTime).toISOString() : null;
+          return {
+            id: hash(`${url}|${title}`),
+            title,
+            title_en: title,
+            title_zh: "",
+            summary,
+            summary_en: summary,
+            summary_zh: "",
+            url,
+            source_name: feed.name,
+            source_url: feed.home,
+            source_kind: feed.kind,
+            source_group: feed.group || "all",
+            published,
+            bucket: bucketFor(published),
+            scores: scoreItem({ title, summary, published }, feed)
+          };
+        }).filter((item) => item.title && item.url);
+      }
+
+      function buildPageItem(feed, title, url, summary = "", published = null) {
+        return {
+          id: hash(`${url}|${title}`),
+          title,
+          title_en: title,
+          title_zh: "",
+          summary: summary || `${feed.name} official update.`,
+          summary_en: summary || `${feed.name} official update.`,
+          summary_zh: "",
+          url,
+          source_name: feed.name,
+          source_url: feed.home,
+          source_kind: feed.kind,
+          published,
+          bucket: bucketFor(published),
+          scores: scoreItem({ title, summary: summary || title, published }, feed)
+        };
+      }
+
+      function normalizeToIso(raw) {
+        if (!raw) return null;
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) return null;
+        return date.toISOString();
+      }
+
+      function parseChineseRelativeTime(text) {
+        const value = String(text || "").trim();
+        if (!value) return null;
+        const now = new Date();
+
+        const todayMatch = value.match(/今天(?:上午|中午|下午|晚上|早上|凌晨)?\s*(\d{1,2})(?:[:点](\d{1,2}))?(?:分)?/);
+        if (todayMatch) {
+          const hour = Number(todayMatch[1]);
+          const minute = Number(todayMatch[2] || 0);
+          return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute).toISOString();
+        }
+
+        const yesterdayMatch = value.match(/昨天(?:上午|中午|下午|晚上|早上|凌晨)?\s*(\d{1,2})(?:[:点](\d{1,2}))?(?:分)?/);
+        if (yesterdayMatch) {
+          const hour = Number(yesterdayMatch[1]);
+          const minute = Number(yesterdayMatch[2] || 0);
+          return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, hour, minute).toISOString();
+        }
+
+        const chineseDateMatch = value.match(/(20\d{2})年(\d{1,2})月(\d{1,2})日(?:\s*(?:上午|中午|下午|晚上|早上|凌晨)?\s*(\d{1,2})(?:[:点](\d{1,2}))?(?:分)?)?/);
+        if (chineseDateMatch) {
+          const hour = Number(chineseDateMatch[4] || 0);
+          const minute = Number(chineseDateMatch[5] || 0);
+          return new Date(Number(chineseDateMatch[1]), Number(chineseDateMatch[2]) - 1, Number(chineseDateMatch[3]), hour, minute).toISOString();
+        }
+
+        const minuteMatch = value.match(/(\d+)\s*分钟前/);
+        if (minuteMatch) return new Date(now.getTime() - Number(minuteMatch[1]) * 60 * 1000).toISOString();
+
+        const hourMatch = value.match(/(\d+)\s*小时前/);
+        if (hourMatch) return new Date(now.getTime() - Number(hourMatch[1]) * 60 * 60 * 1000).toISOString();
+
+        const dayMatch = value.match(/(\d+)\s*天前/);
+        if (dayMatch) return new Date(now.getTime() - Number(dayMatch[1]) * 24 * 60 * 60 * 1000).toISOString();
+
+        const monthDayMatch = value.match(/(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?/);
+        if (monthDayMatch) {
+          const year = now.getFullYear();
+          const hour = Number(monthDayMatch[3] || 0);
+          const minute = Number(monthDayMatch[4] || 0);
+          return new Date(year, Number(monthDayMatch[1]) - 1, Number(monthDayMatch[2]), hour, minute).toISOString();
+        }
+
+        const fullMatch = value.match(/(20\d{2})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?/);
+        if (fullMatch) {
+          const hour = Number(fullMatch[4] || 0);
+          const minute = Number(fullMatch[5] || 0);
+          return new Date(Number(fullMatch[1]), Number(fullMatch[2]) - 1, Number(fullMatch[3]), hour, minute).toISOString();
+        }
+
+        return normalizeToIso(value);
+      }
+
+      function extractPublishedFromContext(context, fallback = "") {
+        const text = String(context || "");
+        const candidates = [
+          /(?:今天|昨天|前天)(?:上午|中午|下午|晚上|早上|凌晨)?\s*\d{1,2}(?:[:点]\d{1,2})?(?:分)?/,
+          /20\d{2}年\d{1,2}月\d{1,2}日(?:\s*(?:上午|中午|下午|晚上|早上|凌晨)?\s*\d{1,2}(?:[:点]\d{1,2})?(?:分)?)?/,
+          /(\d+\s*分钟前|\d+\s*小时前|\d+\s*天前|昨天|前天|\d{1,2}-\d{1,2}(?:\s+\d{1,2}:\d{2})?)/,
+          /(?:published|date|updated|last updated)\s*[:|-]?\s*([A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4})/i,
+          /(?:published|date|updated|last updated)\s*[:|-]?\s*(\d{4}-\d{2}-\d{2})/i
+        ];
+        for (const pattern of candidates) {
+          const match = text.match(pattern);
+          if (match) {
+            const iso = parseChineseRelativeTime(match[0] || match[1]);
+            if (iso) return iso;
+          }
+        }
+        return parseDateFromText(text, fallback);
+      }
+
+      function parseDateFromText(text, baseUrl = "") {
+        const candidates = [];
+        const push = (value) => {
+          const iso = normalizeToIso(value);
+          if (iso) candidates.push(iso);
+        };
+
+        const metaPatterns = [
+          /(?:发布时间|发布日期|发布于|发表于|时间)\s*[:：|-]?\s*((?:20\d{2}[/-]\d{1,2}[/-]\d{1,2})(?:\s+\d{1,2}:\d{2})?|(?:20\d{2}年\d{1,2}月\d{1,2}日)(?:\s*(?:上午|中午|下午|晚上|早上|凌晨)?\s*\d{1,2}(?:[:点]\d{1,2})?(?:分)?)?)/i,
+          /(?:publish_time|publishTime|create_time|createTime|pub_time|pubTime|ctime|ct)\s*[:=]\s*["']?(\d{10,13}|20\d{2}[/-]\d{1,2}[/-]\d{1,2}(?:\s+\d{1,2}:\d{2})?)["']?/i,
+          /(?:published|date|updated|last updated)\s*[:|-]?\s*([A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4})/i,
+          /(?:published|date|updated|last updated)\s*[:|-]?\s*(\d{4}-\d{2}-\d{2})/i,
+          /(?:published|date|updated|last updated)\s*[:|-]?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i
+        ];
+        for (const pattern of metaPatterns) {
+          const match = text.match(pattern);
+          if (!match) continue;
+          const value = match[1];
+          if (/^\d{10,13}$/.test(value)) {
+            const numeric = Number(value.length === 10 ? Number(value) * 1000 : Number(value));
+            if (Number.isFinite(numeric)) push(new Date(numeric).toISOString());
+            continue;
+          }
+          push(value);
+        }
+
+        const chineseDateMatch = text.match(/20\d{2}年\d{1,2}月\d{1,2}日(?:\s*(?:上午|中午|下午|晚上|早上|凌晨)?\s*\d{1,2}(?:[:点]\d{1,2})?(?:分)?)?/);
+        if (chineseDateMatch) push(chineseDateMatch[0]);
+
+        const relativeMatch = text.match(/(?:今天|昨天|前天)(?:上午|中午|下午|晚上|早上|凌晨)?\s*\d{1,2}(?:[:点]\d{1,2})?(?:分)?/);
+        if (relativeMatch) push(relativeMatch[0]);
+
+        const isoMatch = text.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
+        if (isoMatch) push(isoMatch[1]);
+
+        const longMatch = text.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+20\d{2}\b/i);
+        if (longMatch) push(longMatch[0]);
+
+        const shortMatch = text.match(/\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\.?\s+\d{1,2},\s+20\d{2}\b/i);
+        if (shortMatch) push(shortMatch[0]);
+
+        const urlMatch = baseUrl.match(/\/(20\d{2})\/(\d{2})\/(\d{2})\//);
+        if (urlMatch) push(`${urlMatch[1]}-${urlMatch[2]}-${urlMatch[3]}`);
+
+        if (!candidates.length) return null;
+        candidates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+        return candidates[0];
+      }
+
+      async function enrichPageItemWithMeta(item) {
+        try {
+          const fetchUrl = /^https:\/\/mp\.weixin\.qq\.com\/s\?/i.test(item.original_url || "")
+            ? item.original_url
+            : item.url;
+          const response = await apiFetch(jinaProxyUrl(fetchUrl));
+          if (!response.ok) throw new Error(`page ${response.status}`);
+          const text = await response.text();
+          const published = extractPublishedFromContext(text, fetchUrl) || parseDateFromText(text, fetchUrl);
+          const cleanLines = text
+            .split("\n")
+            .map((line) => line.replace(/^[-*#>\s]+/, "").trim())
+            .filter(Boolean);
+          const summary = cleanLines.find((line) => line.length >= 70 && line.length <= 260 && !/^(published|updated|date)/i.test(line));
+          const next = { ...item };
+          if (published) next.published = published;
+          if (summary) {
+            next.summary = summary;
+            next.summary_en = summary;
+          }
+          next.bucket = bucketFor(next.published);
+          next.scores = scoreItem({ title: next.title, summary: next.summary, published: next.published }, FEEDS.find((feed) => feed.name === next.source_name) || { weight: 70, kind: "media" });
+          return next;
+        } catch (error) {
+          return item;
+        }
+      }
+
+      function parseOpenAIPage(text, feed) {
+        return parsePageLinks(text, feed, {
+          hostPattern: /^https:\/\/openai\.com\//,
+          excludePatterns: [/\/news\/?$/i, /\/index/i]
+        });
+      }
+
+      function parseAnthropicPage(text, feed) {
+        return parsePageLinks(text, feed, {
+          hostPattern: /^https:\/\/www\.anthropic\.com\/news\//,
+          excludePatterns: [/\/news\/?$/i]
+        });
+      }
+
+      function parseMitPage(text, feed) {
+        return parsePageLinks(text, feed, {
+          hostPattern: /^https:\/\/www\.technologyreview\.com\//,
+          includePatterns: [/\/20\d{2}\//, /artificial-intelligence/i],
+          excludePatterns: [/\/topic\/artificial-intelligence\/?$/i]
+        });
+      }
+
+      function parseClsPage(text, feed) {
+        return parsePageLinks(text, feed, {
+          hostPattern: /^https:\/\/(?:www|api3)\.cls\.cn\//,
+          includePatterns: [/\/detail\/\d+/i, /人工智能/i, /\bAI\b/i, /算力/i, /大模型/i],
+          excludePatterns: [/\/subject\/1321/i]
+        });
+      }
+
+      function parseHuxiuPage(text, feed) {
+        return parsePageLinks(text, feed, {
+          hostPattern: /^https:\/\/www\.huxiu\.com\//,
+          includePatterns: [/人工智能/i, /\bAI\b/i, /大模型/i, /智能体/i, /机器人/i],
+          excludePatterns: [/\/?$/i]
+        });
+      }
+
+      function parse36KrPage(text, feed) {
+        return parsePageLinks(text, feed, {
+          hostPattern: /^https:\/\/36kr\.com\//,
+          includePatterns: [/\/p\/\d+/i, /人工智能/i, /\bAI\b/i, /大模型/i, /机器人/i],
+          excludePatterns: [/\/?$/i]
+        });
+      }
+
+      function parseJintiankanshaFeed(text, feed) {
+        const items = [];
+        const seen = new Set();
+        const normalized = String(text || "").replace(/\r/g, "");
+
+        const articlePattern = /\[([^\]]{4,90})\]\((https?:\/\/www\.jintiankansha\.(me|com)\/t\/[A-Za-z0-9]+)\)/g;
+        const datePattern = /((?:\d+\s*分钟|\d+\s*小时|\d+\s*天)前|\d{1,2}-\d{1,2}(?:\s+\d{1,2}:\d{2})?|昨天|前天)/;
+
+        for (const match of normalized.matchAll(articlePattern)) {
+          const title = cleanTitle(match[1], feed);
+          const url = match[2].replace(/^http:\/\//i, "https://").replace("jintiankansha.com", "jintiankansha.me");
+          if (!title || seen.has(url)) continue;
+          seen.add(url);
+
+          const contextStart = Math.max(0, match.index - 200);
+          const contextEnd = Math.min(normalized.length, match.index + match[0].length + 200);
+          const context = normalized.slice(contextStart, contextEnd);
+          const dateMatch = context.match(datePattern);
+          const published = dateMatch ? parseChineseRelativeTime(dateMatch[1]) : null;
+
+          const summary = `${feed.authorName} 公众号文章`;
+          const previewUrl = url;
+          const originalUrl = url.replace(/\/t\//i, "/t_original/");
+
+          items.push({
+            id: hash(`${previewUrl}|${title}`),
+            title,
+            title_en: title,
+            title_zh: title,
+            summary,
+            summary_en: summary,
+            summary_zh: summary,
+            url: previewUrl,
+            original_url: originalUrl,
+            source_name: feed.name,
+            source_url: feed.home,
+            source_kind: feed.kind,
+            source_group: feed.group || "all",
+            published,
+            bucket: bucketFor(published),
+            scores: scoreItem({ title, summary, published }, feed)
+          });
+          if (items.length >= 12) return items;
+        }
+
+        return items;
+      }
+
+      function parsePageLinks(text, feed, options = {}) {
+        const items = [];
+        const seen = new Set();
+        const matches = [];
+        const markdownPattern = /\[([^\]]+)\]\((https?:\/\/[^\)\s]+)\)/g;
+        const htmlPattern = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+
+        for (const match of text.matchAll(markdownPattern)) {
+          matches.push({ title: match[1], url: match[2] });
+        }
+        for (const match of text.matchAll(htmlPattern)) {
+          matches.push({ title: stripHtml(match[2]), url: match[1] });
+        }
+
+        for (const match of matches) {
+          const title = cleanTitle(stripHtml(match.title || ""), feed);
+          let url = String(match.url || "").trim();
+          if (!url) continue;
+          try {
+            url = new URL(url, feed.home).href;
+          } catch (error) {
+            continue;
+          }
+          if (!title || seen.has(url)) continue;
+          if (options.hostPattern && !options.hostPattern.test(url)) continue;
+          if (options.includePatterns && !options.includePatterns.some((entry) => entry.test(url) || entry.test(title))) continue;
+          if (options.excludePatterns && options.excludePatterns.some((entry) => entry.test(url) || entry.test(title))) continue;
+          if (title.length < 6) continue;
+          if (/^(read more|learn more|more|news|stories|article|首页|更多|详情)$/i.test(title)) continue;
+          seen.add(url);
+          items.push(buildPageItem(feed, title, url));
+          if (items.length >= 12) break;
+        }
+        return items;
+      }
+
+      function parseFreeWeChatFeed(text, feed) {
+        const items = [];
+        const seen = new Set();
+        const normalized = String(text || "").replace(/\r/g, "");
+
+        const articlePattern = /\[([^\]]{4,90})\]\((https?:\/\/freewechat\.com\/a\/[A-Za-z0-9=]+\/\d+\/\d)\)/g;
+        const datePattern = /(\d{4})年(\d{1,2})月(\d{1,2})日/;
+
+        for (const match of normalized.matchAll(articlePattern)) {
+          const title = cleanTitle(match[1], feed);
+          const url = match[2].replace(/^http:\/\//i, "https://");
+          if (!title || seen.has(url)) continue;
+          seen.add(url);
+
+          const contextStart = Math.max(0, match.index - 300);
+          const contextEnd = Math.min(normalized.length, match.index + match[0].length + 300);
+          const context = normalized.slice(contextStart, contextEnd);
+          const dateMatch = context.match(datePattern);
+          const published = dateMatch ? new Date(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3])).toISOString() : null;
+
+          const summary = `${feed.authorName} 公众号文章`;
+
+          items.push({
+            id: hash(`${url}|${title}`),
+            title,
+            title_en: title,
+            title_zh: title,
+            summary,
+            summary_en: summary,
+            summary_zh: summary,
+            url: url,
+            original_url: url,
+            source_name: feed.name,
+            source_url: feed.home,
+            source_kind: feed.kind,
+            source_group: feed.group || "all",
+            published,
+            bucket: bucketFor(published),
+            scores: scoreItem({ title, summary, published }, feed)
+          });
+          if (items.length >= 12) return items;
+        }
+
+        return items;
+      }
+
+      function parseSogouWeChatFeed(text, feed) {
+        const items = [];
+        const seen = new Set();
+        const normalized = String(text || "").replace(/\r/g, "");
+        const lines = normalized.split("\n");
+        const titlePattern = /\[([^\]]{4,120})\]\((https?:\/\/(?:mp\.weixin\.qq\.com\/s\?[^)\s]+|weixin\.sogou\.com\/link\?[^)\s]+))\)/i;
+        const htmlPattern = /<a[^>]+href=["'](https?:\/\/(?:mp\.weixin\.qq\.com\/s\?[^"']+|weixin\.sogou\.com\/link\?[^"']+))["'][^>]*>([\s\S]*?)<\/a>/i;
+        const aliases = [feed.authorName, ...(feed.authorAliases || [])].filter(Boolean);
+        const cleanWechatText = (value) => stripHtml(value)
+          .replace(/^[#>\s]+/, "")
+          .replace(/[*_`]+/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        const isRelevantContext = (text) => {
+          const normalizedText = normalizeSearchText(text);
+          return aliases.some((alias) => normalizedText.includes(normalizeSearchText(alias)))
+            || /mp\.weixin\.qq\.com/i.test(text)
+            || /微信|公众号|sogou/i.test(text);
+        };
+
+        const buildItem = (rawTitle, rawUrl, context, position) => {
+          const title = cleanTitle(cleanWechatText(rawTitle), feed);
+          const url = normalizeMpWeixinUrl(rawUrl);
+          if (!title || !url || seen.has(url)) return;
+          seen.add(url);
+
+          const contextText = String(context || "").replace(/\s+/g, " ").trim();
+          if (!isRelevantContext(contextText + " " + title)) return;
+          const published = extractPublishedFromContext(contextText, url);
+          const summarySource = lines.slice(position + 1, Math.min(lines.length, position + 6))
+            .map(cleanWechatText)
+            .find((line) => line && line.length >= 18 && line.length <= 220 && !/^https?:\/\//i.test(line) && !aliases.some((alias) => normalizeSearchText(line).includes(normalizeSearchText(alias))));
+          const summary = summarySource || `${feed.authorName} 公众号更新`;
+
+          items.push({
+            id: hash(`${url}|${title}`),
+            title,
+            title_en: title,
+            title_zh: title,
+            summary,
+            summary_en: summary,
+            summary_zh: summary,
+            url,
+            original_url: /^https:\/\/mp\.weixin\.qq\.com\/s\?/i.test(url) ? url : "",
+            source_name: feed.name,
+            source_url: feed.home,
+            source_kind: feed.kind,
+            source_group: feed.group || "all",
+            published,
+            bucket: bucketFor(published),
+            scores: scoreItem({ title, summary, published }, feed)
+          });
+        };
+
+        for (let i = 0; i < lines.length; i += 1) {
+          const line = lines[i];
+          const context = lines.slice(Math.max(0, i - 4), Math.min(lines.length, i + 6)).join("\n");
+          const mdMatch = line.match(titlePattern);
+          if (mdMatch) {
+            buildItem(mdMatch[1], mdMatch[2], context, i);
+            continue;
+          }
+          const htmlMatch = line.match(htmlPattern);
+          if (htmlMatch) {
+            buildItem(stripHtml(htmlMatch[2]), htmlMatch[1], context, i);
+          }
+          if (items.length >= 15) break;
+        }
+
+        return items;
+      }
+
+      async function fetchPageFeed(feed) {
+        const urls = [feed.home];
+        if (feed.kind === "wechat") {
+          const queries = Array.from(new Set([feed.authorName, ...(feed.authorAliases || [])].filter(Boolean))).slice(0, 3);
+          for (const query of queries) {
+            const webSearchUrl = searchProxyUrl(query, "sogou-web");
+            const weixinSearchUrl = searchProxyUrl(query, "sogou-weixin");
+            if (webSearchUrl) urls.push(webSearchUrl);
+            if (weixinSearchUrl) urls.push(weixinSearchUrl);
+          }
+        }
+
+        const responses = await Promise.all(Array.from(new Set(urls.filter(Boolean))).map(async (url) => {
+          const response = await apiFetch(proxyFetchUrl(url));
+          if (!response.ok) return "";
+          return response.text();
+        }));
+
+        const texts = responses.filter(Boolean);
+        let items = [];
+        for (const text of texts) {
+          if (feed.parser === "jintiankansha") items.push(...parseJintiankanshaFeed(text, feed));
+          if (feed.parser === "freewechat") items.push(...parseFreeWeChatFeed(text, feed));
+          if (feed.kind === "wechat") items.push(...parseSogouWeChatFeed(text, feed));
+          if (feed.name === "OpenAI") items.push(...parseOpenAIPage(text, feed));
+          if (feed.name === "Anthropic") items.push(...parseAnthropicPage(text, feed));
+          if (feed.name === "MIT Technology Review AI") items.push(...parseMitPage(text, feed));
+          if (feed.name === "财联社 AI") items.push(...parseClsPage(text, feed));
+          if (feed.name === "虎嗅网") items.push(...parseHuxiuPage(text, feed));
+          if (feed.name === "36氪") items.push(...parse36KrPage(text, feed));
+        }
+        if (!items.length) {
+          const fallbackText = texts[0] || "";
+          items = parsePageLinks(fallbackText, feed, {
+            hostPattern: new RegExp(`^https://${new URL(feed.home).hostname.replace(/\./g, "\\.")}/`)
+          });
+        }
+        if (!items.length) return [];
+        const enriched = await Promise.all(items.slice(0, 12).map(async (item) => {
+          const next = { ...item };
+          if (feed.kind === "wechat") {
+            const resolved = await resolveWeChatOriginalUrl(next);
+            if (resolved) next.original_url = resolved;
+          }
+          return enrichPageItemWithMeta(next);
+        }));
+        return dedupe(enriched).sort(compareByPublishedDesc);
+      }
+
+      function dedupe(items) {
+        const seen = new Set();
+        return items.filter((item) => {
+          const key = `${new URL(item.url).hostname}|${item.title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, " ").slice(0, 90)}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }
+
+      function diversify(items, limit = 20) {
+        const sourceCounts = new Map();
+        const selected = [];
+        for (const item of items) {
+          const count = sourceCounts.get(item.source_name) || 0;
+          if (count >= 5) continue;
+          selected.push(item);
+          sourceCounts.set(item.source_name, count + 1);
+          if (selected.length >= limit) return selected;
+        }
+        for (const item of items) {
+          if (!selected.includes(item)) selected.push(item);
+          if (selected.length >= limit) break;
+        }
+        return selected;
+      }
+
+      function perSourceWindow(items, perSource = 6) {
+        const counts = new Map();
+        return items.filter((item) => {
+          const key = item.source_name || "unknown";
+          const used = counts.get(key) || 0;
+          if (used >= perSource) return false;
+          counts.set(key, used + 1);
+          return true;
+        });
+      }
+
+      function interleaveBySource(items) {
+        const groups = new Map();
+        items.forEach((item) => {
+          const key = item.source_name || "unknown";
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(item);
+        });
+        const lists = [...groups.values()];
+        const result = [];
+        let index = 0;
+        while (result.length < items.length) {
+          let added = false;
+          for (const list of lists) {
+            if (list[index]) {
+              result.push(list[index]);
+              added = true;
+            }
+          }
+          if (!added) break;
+          index += 1;
+        }
+        return result;
+      }
+
+      function takeLatestWindow(items, limit = 20) {
+        const datedItems = items
+          .filter((item) => item.published)
+          .sort(compareByPublishedDesc);
+        const undatedItems = items.filter((item) => !item.published);
+        return [...datedItems, ...undatedItems].slice(0, limit).map((item) => ({
+          ...item,
+          bucket: bucketFor(item.published)
+        }));
+      }
+
+      function markNew(items) {
+        const previous = new Set(state.previousIds);
+        const marked = items.map((item) => ({
+          ...item,
+          isNew: previous.size > 0 && !previous.has(item.id)
+        }));
+        state.previousIds = marked.map((item) => item.id);
+        localStorage.setItem("hotspotOnlinePreviousIds", JSON.stringify(state.previousIds));
+        return marked;
+      }
+
+      async function refreshHotspots() {
+        state.loading = true;
+        state.translating = false;
+        state.errors = [];
+        const feeds = dynamicFeeds();
+        state.feedStatuses = feeds.map((feed) => ({
+          name: feed.name,
+          home: feed.home,
+          ok: null,
+          totalCount: 0,
+          todayCount: 0,
+          latestPublished: null,
+          error: ""
+        }));
+        render();
+        const results = await Promise.allSettled(feeds.map(fetchFeed));
+        const items = [];
+        results.forEach((result, index) => {
+          const feed = feeds[index];
+          const status = {
+            name: feed.name,
+            home: feed.home,
+            ok: result.status === "fulfilled",
+            totalCount: 0,
+            todayCount: 0,
+            latestPublished: null,
+            error: ""
+          };
+          if (result.status === "fulfilled") {
+            const feedItems = result.value || [];
+            items.push(...feedItems);
+            status.totalCount = feedItems.length;
+            status.todayCount = feedItems.filter((item) => isTodayLocal(item.published)).length;
+            status.latestPublished = latestPublished(feedItems);
+          } else {
+            state.errors.push(result.reason.message);
+            status.error = result.reason.message;
+          }
+          state.feedStatuses[index] = status;
+        });
+        const ranked = dedupe(items).sort(compareByPublishedDesc);
+        // 每个信源先按时间取若干条，再轮转交错，保证更新较慢的官方源不被高频快讯挤出
+        let selected = diversify(interleaveBySource(perSourceWindow(ranked, 6)), AI_MAX_ITEMS);
+
+        state.aiBrief = "";
+        state.aiError = "";
+        state.aiActive = false;
+        state.aiLoading = aiReady();
+        render();
+
+        if (state.aiLoading) {
+          try {
+            const result = await aiAnalyze(selected);
+            const enhanced = applyAiResult(selected, result);
+            // 模型误杀过多时保守回退，不让页面变空
+            if (enhanced.length >= Math.min(6, selected.length)) {
+              selected = enhanced;
+              state.aiBrief = String(result.brief || "").slice(0, 200);
+              state.aiActive = true;
+            } else {
+              state.aiError = "AI 筛除过多，已保留原始结果";
+            }
+          } catch (error) {
+            state.aiError = error?.message || "AI 调用失败";
+            console.warn("AI enhance failed:", error);
+          }
+          state.aiLoading = false;
+        }
+
+        // AI 结果用于补充分析，不能缩减或重排已抓取资讯。
+        const enhanced = new Map(selected.map((item) => [item.id, item]));
+        state.items = markNew(ranked.map((item) => enhanced.get(item.id) || item).sort(compareByPublishedDesc));
+        state.officialPool = state.items.filter((item) => item.source_group === "official");
+        state.lastUpdatedAt = new Date().toISOString();
+        localStorage.setItem("hotspotOnlineLastUpdatedAt", state.lastUpdatedAt);
+        state.loading = false;
+        render();
+        await enrichTranslations(state.items);
+        render();
+      }
+
+      function itemText(item, field) {
+        const key = `${field}_${state.lang}`;
+        return item[key] || item[field] || "";
+      }
+
+      // ---------------- 关键词分类 ----------------
+      const TOPIC_RULES = [
+        { key: "all", zh: "全部", en: "All" },
+        { key: "primary", zh: "一手", en: "First-party", test: (it) => it.source_kind === "official" || it.source_group === "official" },
+        { key: "model", zh: "模型", en: "Models", test: (it) => /模型|大模型|llm|gpt|claude|gemini|deepseek|qwen|llama|sora|参数|multimodal/i.test(textOf(it)) },
+        { key: "product", zh: "产品", en: "Products", test: (it) => /产品|上线|推出|发布|app|应用|功能|更新|版本|钱包|wallet|工具/i.test(textOf(it)) },
+        { key: "industry", zh: "行业", en: "Industry", test: (it) => /融资|收购|市值|营收|市场|财报|股价|ceo|裁员|公司|合作/i.test(textOf(it)) },
+        { key: "research", zh: "论文", en: "Research", test: (it) => /论文|研究|paper|arxiv|benchmark|评测|实验|数据集|报告/i.test(textOf(it)) },
+        { key: "tutorial", zh: "教程", en: "Guides", test: (it) => /教程|指南|how to|guide|tutorial|入门|实践|手把手/i.test(textOf(it)) },
+        { key: "view", zh: "观点", en: "Opinion", test: (it) => /观点|评论|分析|观察|为何|为什么|专访|对话|反思/i.test(textOf(it)) }
+      ];
+
+      function textOf(item) {
+        return `${itemText(item, "title")} ${itemText(item, "summary")} ${(item.tags || []).join(" ")} ${item.source_name || ""}`;
+      }
+
+      function topicKeys(item) {
+        return TOPIC_RULES.filter((rule) => rule.test && rule.test(item)).map((rule) => rule.key);
+      }
+
+      function renderTopics() {
+        const counts = new Map();
+        state.items.forEach((item) => {
+          topicKeys(item).forEach((key) => counts.set(key, (counts.get(key) || 0) + 1));
+        });
+        const zh = state.lang === "zh";
+        const box = document.querySelector("#topicTabs");
+        box.innerHTML = TOPIC_RULES.filter((rule) => !rule.test || counts.get(rule.key)).map((rule) => {
+          const label = zh ? rule.zh : rule.en;
+          const total = rule.test ? counts.get(rule.key) : state.items.length;
+          return `<button class="topic-tab ${state.topic === rule.key ? "active" : ""}" data-topic="${rule.key}" type="button">${label}${total ? ` ${total}` : ""}</button>`;
+        }).join("");
+      }
+
+      // ---------------- 收藏 ----------------
+      function favButton(item) {
+        const on = !!state.favorites[item.id];
+        return `<button class="fav-btn ${on ? "on" : ""}" data-fav="${aiText(item.id)}" type="button" title="${on ? "取消收藏" : "收藏"}">${on ? "★" : "☆"}</button>`;
+      }
+
+      function toggleFavorite(id) {
+        if (state.favorites[id]) {
+          delete state.favorites[id];
+        } else {
+          const item = state.items.find((x) => x.id === id)
+            || state.officialPool.find((x) => x.id === id);
+          if (!item) return;
+          state.favorites[id] = {
+            id,
+            title: itemText(item, "title"),
+            url: item.original_url || item.url || "",
+            source: item.source_name || "",
+            score: Math.round(item.scores?.total || 0),
+            savedAt: new Date().toISOString()
+          };
+        }
+        try { localStorage.setItem("hotspotOnlineFavorites", JSON.stringify(state.favorites)); } catch (error) { /* 配额不足时忽略 */ }
+        render();
+      }
+
+      function favoriteItems() {
+        return Object.values(state.favorites).map((fav) => ({
+          id: fav.id,
+          title: fav.title,
+          summary: state.lang === "zh" ? "已收藏 · 点击标题打开原文" : "Saved · click the title to open",
+          url: fav.url,
+          original_url: fav.url,
+          source_url: fav.url,
+          source_name: fav.source || "收藏",
+          source_kind: "fav",
+          tags: [],
+          published: fav.savedAt,
+          isNew: false,
+          scores: { total: fav.score || 0, dryness: 0, freshness: 0, relevance: 0 }
+        }));
+      }
+
+      // ---------------- 当前热点榜 / AI 日报 ----------------
+      function topScored(limit) {
+        return state.items.slice()
+          .sort((a, b) => (b.scores?.total || 0) - (a.scores?.total || 0))
+          .slice(0, limit);
+      }
+
+      function renderHotList() {
+        const box = document.querySelector("#hotList");
+        const top = topScored(5);
+        if (!top.length) {
+          box.innerHTML = `<li class="hint">${state.lang === "zh" ? "暂无热点" : "No trending items"}</li>`;
+          return;
+        }
+        box.innerHTML = top.map((item, index) => {
+          const title = aiText(itemText(item, "title"));
+          const url = item.original_url || item.url || "";
+          const source = aiText(item.source_name || "");
+          const date = item.published ? formatTime(item.published, false) : "";
+          const meta = [source, date].filter(Boolean).join(" · ");
+          return `
+            <li class="hot-row">
+              <span class="hot-rank">${index + 1}</span>
+              <span class="hot-main">
+                <a class="hot-title" href="${url}" target="_blank" rel="noopener noreferrer" title="${title}">${title}</a>
+                ${meta ? `<span class="hot-meta">${meta}</span>` : ""}
+              </span>
+              <span class="hot-heat">${Math.round(item.scores?.total || 0)} 热度</span>
+              ${favButton(item)}
+            </li>`;
+        }).join("");
+      }
+
+      function renderBrief() {
+        const box = document.querySelector("#briefText");
+        document.querySelector("#briefTime").textContent = state.lastUpdatedAt ? formatTime(state.lastUpdatedAt, false) : "";
+        if (state.aiBrief) {
+          box.innerHTML = aiText(state.aiBrief);
+          return;
+        }
+        const top = topScored(3);
+        box.innerHTML = top.length
+          ? (state.lang === "zh"
+              ? `今日共 <b>${state.items.length}</b> 条资讯，重点关注：` + top.map((x) => `「${aiText(itemText(x, "title"))}」`).join("、") + "。"
+              : `<b>${state.items.length}</b> items today. Top picks: ` + top.map((x) => aiText(itemText(x, "title"))).join(" / ") + ".")
+          : `<span class="empty">${state.lang === "zh" ? "暂无日报内容，点击「刷新热点」获取。" : "No digest yet. Tap Refresh."}</span>`;
+      }
+
+      // ---------------- 侧边栏 ----------------
+      const VIEW_TARGET = {
+        featured: "#stream", all: "#stream", hot: "#hotPanel",
+        daily: "#briefPanel", topic: "#topicBar", fav: "#stream"
+      };
+
+      function renderModuleLabels() {
+        const zh = state.lang === "zh";
+        document.querySelectorAll(".side-item").forEach((btn) => {
+          const label = btn.querySelector(".side-label");
+          if (label) label.textContent = zh ? btn.dataset.zh : btn.dataset.en;
+        });
+        document.querySelector("#hotTitle").textContent = zh ? "当前热点" : "Trending now";
+        document.querySelector("#hotHint").textContent = zh ? "按站内综合评分排序 · 点击标题打开原文" : "Ranked by site score · click to open";
+        document.querySelector("#briefTitle").textContent = zh ? "AI 日报" : "AI daily";
+        document.querySelector("#topicSearch").placeholder = zh ? "搜索标题、摘要..." : "Search titles & summaries...";
+      }
+
+      function renderSidebar() {
+        document.querySelectorAll(".side-item").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.view === state.activeView);
+        });
+        const count = Object.keys(state.favorites).length;
+        document.querySelector("#favCount").textContent = count ? String(count) : "";
+      }
+
+      function activateView(view) {
+        state.activeView = view;
+        state.favOnly = view === "fav";
+        if (view === "fav" || view === "all") {
+          state.topic = "all";
+          state.query = "";
+          state.officialOnly = false;
+          state.onlyNew = false;
+          state.selectedDate = "";
+          document.querySelector("#topicSearch").value = "";
+          document.querySelector("#dateFilter").value = "";
+        }
+        setDrawerOpen(false);
+        render();
+        const target = document.querySelector(VIEW_TARGET[view] || "#stream");
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      function visibleItems() {
+        if (state.favOnly) return favoriteItems();
+        let list = state.officialOnly ? state.officialPool : state.items;
+        if (state.activeView === "featured") list = list.filter((item) => (item.scores?.total || 0) >= 75);
+        if (state.topic !== "all") list = list.filter((item) => topicKeys(item).includes(state.topic));
+        if (state.query) {
+          const query = state.query.toLowerCase();
+          list = list.filter((item) => textOf(item).toLowerCase().includes(query));
+        }
+        if (state.onlyNew) list = list.filter((item) => item.isNew);
+        if (state.selectedDate) list = list.filter((item) => localDateKey(item.published) === state.selectedDate);
+        return list;
+      }
+
+      function localDateKey(value) {
+        if (!value) return "";
+        const date = new Date(value);
+        if (!Number.isFinite(date.getTime())) return "";
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      }
+
+      function groupItems(items) {
+        const grouped = [];
+        for (const item of items) {
+          const key = item.bucket?.key || "unknown";
+          let group = grouped.find((entry) => entry.key === key);
+          if (!group) {
+            group = { key, label: item.bucket?.[state.lang] || key, items: [] };
+            grouped.push(group);
+          }
+          group.items.push(item);
+        }
+        grouped.forEach((group) => {
+          group.items.sort(compareByPublishedDesc);
+          group.latest = group.items[0]?.published || "";
+        });
+        return grouped.sort((a, b) => {
+          const aTime = a.latest ? new Date(a.latest).getTime() : 0;
+          const bTime = b.latest ? new Date(b.latest).getTime() : 0;
+          if (bTime !== aTime) return bTime - aTime;
+          return 0;
+        });
+      }
+
+      function dayLabel(published) {
+        if (!published) return t("unknownTime");
+        return new Intl.DateTimeFormat(state.lang === "zh" ? "zh-CN" : "en", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit"
+        }).format(new Date(published));
+      }
+
+      function renderSourceStatuses() {
+        if (!state.feedStatuses.length) {
+          sourcesPanel.hidden = true;
+          return;
+        }
+        sourcesPanel.hidden = false;
+        sourcesPanel.innerHTML = state.feedStatuses.map((status) => {
+          const stateClass = status.ok === null ? "pending" : status.ok ? "ok" : "error";
+          const stateText = status.ok === null ? t("sourceFetching") : status.ok ? t("sourceOk") : t("sourceError");
+          const latestText = status.latestPublished ? formatTime(status.latestPublished) : t("unknownTime");
+          return `
+            <div class="source-card">
+              <a href="${status.home}" target="_blank" rel="noopener noreferrer"><strong>${status.name}</strong></a>
+              <div class="source-meta">
+                <span class="state-pill ${stateClass}">${t("sourceState")} · ${stateText}</span>
+                <span>${t("sourceToday")} · ${t("sourceItems")(status.todayCount || 0)}</span>
+                <span>${t("sourceLatest")} · ${latestText}</span>
+              </div>
+              ${status.error ? `<div class="source-error">${status.error}</div>` : ""}
+            </div>
+          `;
+        }).join("");
+      }
+
+      function updateClock() {
+        liveClock.textContent = `${t("liveClock")} · ${formatTime(Date.now())}`;
+      }
+
+      function renderNewStrip() {
+        const newItems = state.items.filter((item) => item.isNew);
+        newLabel.textContent = t("newTag");
+        if (!state.lastUpdatedAt) {
+          newStrip.hidden = true;
+          return;
+        }
+        if (!newItems.length) {
+          newText.textContent = t("noNewItems");
+          newStrip.hidden = false;
+          return;
+        }
+        const titles = newItems.slice(0, 3).map((item) => itemText(item, "title")).join(" / ");
+        newText.textContent = `${t("newHeadline")} · ${t("newItemsText")(newItems.length, titles)}`;
+        newStrip.hidden = false;
+      }
+
+      function scoreChip(label, value, extraClass = "") {
+        return `<span class="chip ${extraClass}">${label} ${Number(value).toFixed(0)}</span>`;
+      }
+
+      function renderStatus() {
+        if (state.aiLoading) {
+          statusStrip.textContent = t("aiAnalyzing");
+          statusStrip.classList.remove("error");
+          statusStrip.hidden = false;
+          return;
+        }
+        if (state.loading) {
+          statusStrip.textContent = t("loading");
+          statusStrip.classList.remove("error");
+          statusStrip.hidden = false;
+          return;
+        }
+        if (state.translating) {
+          statusStrip.textContent = t("translating");
+          statusStrip.classList.remove("error");
+          statusStrip.hidden = false;
+          return;
+        }
+        if (state.aiError) {
+          statusStrip.textContent = `${t("aiFailed")} ${state.aiError}`;
+          statusStrip.classList.add("error");
+          statusStrip.hidden = false;
+          return;
+        }
+        if (state.errors.length) {
+          const offline = state.errors.every((message) =>
+            /Failed to fetch|NetworkError|Load failed|Network request failed/i.test(String(message))
+          );
+          statusStrip.textContent = offline
+            ? t("relayOffline")
+            : `${t("error")} ${state.errors.slice(0, 2).join(" / ")}`;
+          statusStrip.classList.add("error");
+          statusStrip.hidden = false;
+          return;
+        }
+        statusStrip.hidden = true;
+      }
+
+      function render() {
+        document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
+        document.body.dataset.theme = state.theme;
+        document.querySelector("#themeToggle").textContent = state.theme === "dark" ? "☀" : "☾";
+        const brandTitle = settings.siteTitle || t("title");
+        const brandSubtitle = settings.siteSubtitle || t("subtitle");
+        document.title = brandTitle;
+        document.querySelector("#title").textContent = brandTitle;
+        document.querySelector("#subtitle").textContent = brandSubtitle;
+        const siteLogo = document.querySelector("#siteLogo");
+        if (settings.siteLogo) {
+          siteLogo.src = settings.siteLogo;
+          siteLogo.hidden = false;
+        } else {
+          siteLogo.hidden = true;
+          siteLogo.removeAttribute("src");
+        }
+        document.querySelector("#metricCountLabel").textContent = t("count");
+        document.querySelector("#metricSourcesLabel").textContent = t("sources");
+        document.querySelector("#metricUpdatedLabel").textContent = t("updated");
+        document.querySelector("#metricModeLabel").textContent = t("mode");
+        document.querySelector("#metricCount").textContent = visibleItems().length;
+        document.querySelector("#dateLabel").textContent = state.lang === "zh" ? "选择日期" : "Date";
+        document.querySelector("#clearDate").textContent = state.lang === "zh" ? "全部日期" : "All dates";
+        document.querySelector("#metricSources").textContent = state.feedStatuses.length;
+        document.querySelector("#metricUpdated").textContent = state.lastUpdatedAt ? formatTime(state.lastUpdatedAt, false) : "--";
+        document.querySelector("#metricMode").textContent = `${t("onlineMode")} · ${state.aiActive ? t("aiModeOn") : t("latestWindow")}`;
+        lastUpdated.textContent = `${t("lastUpdated")} · ${formatTime(state.lastUpdatedAt)}`;
+        refreshButton.textContent = state.loading ? t("refreshing") : t("refresh");
+        refreshButton.disabled = state.loading;
+        toggleNew.textContent = t("onlyNew");
+        toggleNew.classList.toggle("active", state.onlyNew);
+        const officialButton = document.querySelector("#toggleOfficial");
+        officialButton.textContent = t("officialOnly");
+        officialButton.classList.toggle("active", state.officialOnly);
+        document.querySelector("#openMobile").textContent = t("mobileView");
+        document.querySelector("#langZh").classList.toggle("active", state.lang === "zh");
+        document.querySelector("#langEn").classList.toggle("active", state.lang === "en");
+        renderNewStrip();
+        renderStatus();
+        renderSourceStatuses();
+        renderModuleLabels();
+        renderTopics();
+        renderHotList();
+        renderBrief();
+        renderSidebar();
+
+        const items = visibleItems();
+        if (!items.length) {
+          stream.innerHTML = `<div class="empty">${state.loading ? t("loading") : state.selectedDate ? (state.lang === "zh" ? "所选日期暂无已抓取资讯" : "No fetched articles for this date") : state.officialOnly ? t("emptyOfficial") : state.onlyNew ? t("emptyNewOnly") : t("empty")}</div>`;
+          return;
+        }
+
+        const orderedItems = items.slice().sort(compareByPublishedDesc);
+        const briefHtml = state.aiBrief
+          ? `<div class="ai-brief"><b>${t("aiBriefLabel")}</b>${aiText(state.aiBrief)}</div>`
+          : "";
+        const dayCounts = new Map();
+        for (const item of orderedItems) {
+          const key = localDateKey(item.published) || "unknown";
+          dayCounts.set(key, (dayCounts.get(key) || 0) + 1);
+        }
+        let lastDay = "";
+        stream.innerHTML = briefHtml + orderedItems.map((item) => {
+          const scores = item.scores;
+          const sourceLink = item.source_kind === "wechat"
+            ? (item.original_url || item.url || item.source_url)
+            : item.source_url;
+          const currentDay = localDateKey(item.published) || "unknown";
+          const weekday = currentDay === "unknown" ? "" : new Intl.DateTimeFormat(state.lang === "zh" ? "zh-CN" : "en", {weekday:"long"}).format(new Date(item.published));
+          const count = dayCounts.get(currentDay);
+          const isNewDay = currentDay !== lastDay;
+          const openByDefault = lastDay === "";
+          const isOpen = Object.prototype.hasOwnProperty.call(state.dateOpen, currentDay) ? state.dateOpen[currentDay] : openByDefault;
+          const dayDivider = isNewDay ? `${lastDay ? "</details>" : ""}<details class="date-group" data-day="${currentDay}" ${isOpen ? "open" : ""}><summary class="bucket-title">${dayLabel(item.published)} <small>${weekday} · ${count} ${state.lang === "zh" ? "条" : "items"}</small></summary>` : "";
+          lastDay = currentDay;
+          const timelineTime = currentDay === "unknown" ? "--:--" : new Intl.DateTimeFormat(state.lang === "zh" ? "zh-CN" : "en-GB", {hour:"2-digit", minute:"2-digit", hour12:false}).format(new Date(item.published));
+          return `
+            ${dayDivider}
+            <article>
+              <div class="timeline-rail">${timelineTime}</div>
+              <div class="item">
+                <div class="card-fav">${favButton(item)}</div>
+                <h2><a href="${item.original_url || item.url}" target="_blank" rel="noopener noreferrer">${itemText(item, "title")}</a></h2>
+                <p>${itemText(item, "summary")}</p>
+                <div class="meta">
+                  ${item.isNew ? `<span class="chip new">${t("newTag")}</span>` : ""}
+                  <a class="chip source" href="${sourceLink}" target="_blank" rel="noopener noreferrer">${t("source")} · ${item.source_name}</a>
+                  <span class="chip">${t("published")} · ${formatTime(item.published)}</span>
+                </div>
+                <div class="scores">
+                  ${item.aiScore !== undefined && item.aiScore !== null ? `<span class="chip ai">${t("aiScore")} ${item.aiScore}</span>` : ""}
+                  ${scoreChip(t("score"), scores.total)}
+                  ${scoreChip(t("dry"), scores.dryness)}
+                  ${scoreChip(t("fresh"), scores.freshness)}
+                  ${scoreChip(t("rel"), scores.relevance)}
+                </div>
+                ${item.aiReason ? `<div class="ai-reason">${aiText(item.aiReason)}</div>` : ""}
+              </div>
+            </article>
+          `;
+        }).join("") + "</details>";
+      }
+
+      function setSidebarCollapsed(on) {
+        document.body.classList.toggle("side-collapsed", on);
+        document.querySelector("#sidebar").classList.toggle("collapsed", on);
+      }
+
+      function setDrawerOpen(on) {
+        document.body.classList.toggle("side-open", on);
+      }
+
+      document.querySelector("#menuToggle").addEventListener("click", () => {
+        const narrow = typeof window.matchMedia === "function" && window.matchMedia("(max-width: 900px)").matches;
+        if (narrow) setDrawerOpen(!document.body.classList.contains("side-open"));
+        else setSidebarCollapsed(!document.body.classList.contains("side-collapsed"));
+      });
+
+      document.querySelector("#sideScrim").addEventListener("click", () => setDrawerOpen(false));
+
+      document.querySelector("#sidebar").addEventListener("click", (event) => {
+        const btn = event.target.closest(".side-item");
+        if (!btn || btn.id === "openSettings") return;
+        activateView(btn.dataset.view);
+      });
+
+      document.querySelector("#topicTabs").addEventListener("click", (event) => {
+        const btn = event.target.closest("[data-topic]");
+        if (!btn) return;
+        state.topic = btn.dataset.topic;
+        state.favOnly = false;
+        state.activeView = "topic";
+        render();
+      });
+
+      document.querySelector("#topicSearch").addEventListener("input", (event) => {
+        state.query = event.target.value.trim();
+        render();
+      });
+
+      document.addEventListener("click", (event) => {
+        const btn = event.target.closest("[data-fav]");
+        if (!btn) return;
+        event.preventDefault();
+        event.stopPropagation();
+        toggleFavorite(btn.dataset.fav);
+      });
+
+      stream.addEventListener("click", (event) => {
+        const summary = event.target.closest(".date-group > summary");
+        if (!summary) return;
+        const group = summary.parentElement;
+        state.dateOpen[group.dataset.day] = !group.open;
+      });
+
+      document.querySelector("#langZh").addEventListener("click", () => {
+        state.lang = "zh";
+        localStorage.setItem("hotspotOnlineLang", "zh");
+        render();
+      });
+
+      document.querySelector("#langEn").addEventListener("click", () => {
+        state.lang = "en";
+        localStorage.setItem("hotspotOnlineLang", "en");
+        render();
+      });
+
+      document.querySelector("#themeToggle").addEventListener("click", () => {
+        state.theme = state.theme === "dark" ? "light" : "dark";
+        localStorage.setItem("hotspotOnlineTheme", state.theme);
+        render();
+      });
+
+      toggleNew.addEventListener("click", () => {
+        state.onlyNew = !state.onlyNew;
+        localStorage.setItem("hotspotOnlineOnlyNew", state.onlyNew ? "1" : "0");
+        render();
+      });
+
+      document.querySelector("#toggleOfficial").addEventListener("click", () => {
+        state.officialOnly = !state.officialOnly;
+        localStorage.setItem("hotspotOnlineOfficialOnly", state.officialOnly ? "1" : "0");
+        render();
+      });
+
+      document.querySelector("#dateFilter").addEventListener("change", (event) => {
+        state.selectedDate = event.target.value;
+        render();
+      });
+      document.querySelector("#clearDate").addEventListener("click", () => {
+        state.selectedDate = "";
+        document.querySelector("#dateFilter").value = "";
+        render();
+      });
+      refreshButton.addEventListener("click", refreshHotspots);
+
+      render();
+      updateClock();
+      setInterval(updateClock, 1000);
+      refreshHotspots();
+    </script>
+  </body>
+</html>
